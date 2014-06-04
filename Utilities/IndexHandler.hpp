@@ -29,6 +29,7 @@ lookup through a vtable, which would be overkill.
 #include <cassert>
 #include <limits>
 #include <vector>
+#include <map>
 #include <algorithm>
 
 /*
@@ -36,9 +37,6 @@ Manage conversion from some arbitrary set of integral values (eg. channel number
 to indices.
 
 Keys should be inserted one by one; they will be assigned indices in order.
-
-KeyForIndex is currently inefficient; it could be faster if we maintained a secondary
-structure which maps back.  But it complicates the code and I may not need it, so omit for now.
 */
 template<typename KeyT>
 class MapIndexHandler
@@ -54,30 +52,24 @@ class MapIndexHandler
 
   // Add a new key.  Duplicate keys should not be added.
   void InsertKey(const key_type& k) {
-    assert(std::find(fKeys.begin(), fKeys.end(), k) == fKeys.end());
+    assert(not HasKey(k));
+    fKeyToIndex[k] = fKeys.size();
     fKeys.push_back(k);
     fMaxIndex++;
   }
 
-  key_type KeyAtIndex(size_t index) const {
+  key_type KeyForIndex(size_t index) const {
     assert(index < fKeys.size());
     return fKeys[index];
   }
 
   bool HasKey(key_type key) const {
-    return (std::find(fKeys.begin(), fKeys.end(), key) != fKeys.end());
+    return (fKeyToIndex.find(key) != fKeyToIndex.end());
   }
 
-  // Not efficient, but simplest from a coding perspective -- be sure to profile.
-  // (If it is a bottleneck, consider a secondary structure or boost::MultiIndex.)
-  // Do not pass in a key which is not part of the index.
   size_t IndexForKey(key_type key) const {
-    for(size_t i = 0; i < fMaxIndex; i++) {
-      if(fKeys[i] == key) return i;
-    }
-
-    assert(false and "key is not in index"); // Should never reach this point.
-    return 0; // Just to make the compiler happy.
+    assert(HasKey(key));
+    return fKeyToIndex.find(key)->second;
   }
 
   size_t MaxIndex() const {return fMaxIndex;}
@@ -85,6 +77,7 @@ class MapIndexHandler
  private:
   size_t fMaxIndex;
   std::vector<KeyT> fKeys;
+  std::map<KeyT, size_t> fKeyToIndex;
 };
 
 /*
