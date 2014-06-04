@@ -49,11 +49,12 @@ class NoiseMatrix
 
  private:
   NoiseMatrix(const NoiseBlockIndexT& index)
-    : fNoiseBlockIndex(index)
+    : fNoiseBlockIndex(index),
+      fNoise(index.MaxIndex()*index.MaxIndex())
   { }
 
-  std::vector<double> fNoise;
   NoiseBlockIndexT fNoiseBlockIndex; // Guaranteed equal to the one owned by NoiseCorrelations.
+  std::vector<double> fNoise;
   friend class NoiseCorrelations;
 };
 
@@ -81,9 +82,6 @@ class NoiseCorrelations
       fBlockIndex(RangeIndexHandler<unsigned char>(0, 2), channelIndex)
   {
     fMatrices.resize(fFreqIndex.MaxIndex(), NoiseMatrix(fBlockIndex));
-    for(size_t i = 0; i < fMatrices.size(); i++) {
-      fMatrices[i].fNoise.resize(fBlockIndex.MaxIndex()*fBlockIndex.MaxIndex());
-    }
   }
 
   const FrequencyIndexT& GetFrequencyIndex() const {return fFreqIndex;}
