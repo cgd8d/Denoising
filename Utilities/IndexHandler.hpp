@@ -13,6 +13,7 @@ SubIndexHandler:	index which uses only a subrange of another index.
 All of these classes expose a common interface:
 key_type:				The type of the keys (a typedef).
 key_type KeyForIndex(size_t) const:	Convert index to key.
+size_t IndexForKey(key_type) const:     Find the index whose key is most similar to the argument.
 size_t MaxIndex() const:		Index ranges from 0 to MaxIndex()-1, inclusive.
 
 Additional functions specific to the type of handler is also provided.
@@ -85,6 +86,11 @@ For an interval [a,b] and N indices, translate index:
 i -> a + (b-a)*i/(N-1), for i = 0 .. N-1.
 This means we divide the interval into N even pieces and index including a and b.
 Mainly this is useful for indexing frequency and keeping track of the meanings of frequency.
+It is also used for indexing position in the lightmap.
+(There is a conflict of semantics there -- noise is evaluated at frequency values,
+while the lightmap is histogrammed inside position bins.  The choice that both ends of
+the interval are inclusive is easier for frequency, but means you must be careful with the
+out-of-range testing for the lightmap.)
 */
 class IntervalIndexHandler
 {
@@ -108,6 +114,7 @@ class IntervalIndexHandler
 
   // Return the largest index such that KeyForIndex(index) <= key.
   // If key < start, return size_t(-1).
+  // If key > end, we still return MaxIndex()-1.
   size_t IndexForKey(key_type key) const {
     key -= fStart;
     key /= fStepSize;
