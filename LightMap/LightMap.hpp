@@ -10,6 +10,11 @@ The user should be aware of:
 PositionFunc: Holds R(\vec{x}, apdNo) in one massive array.
 GainSnapshot: Holds S(t, apdNo) for one particular range of runs.
 GainFunc: Holds S(t, apdNo) for all times as a non-overlapping set of GainSnapshots.
+
+The gain function is assumed to be constant on run intervals [first_run, last_run]; note
+that the old version of this code (used for the 2014 0nu paper) assumed gain could change
+on a run-by-run basis, but this led to a very jump gain function which probably was
+dominated by statistics.
 */
 
 #include "Utilities/IndexHandler.hpp"
@@ -161,10 +166,7 @@ In cases where we need to store gain functions covering all history, store them 
 class GainFunc
 {
  public:
-  GainFunc(const APDIndexT& index)
-  : fAPDIndex(index),
-    fIsSorted(true)
-  { }
+  GainFunc() : fIsSorted(true) { }
 
   // Snapshots must not overlap, but this is checked when the function is used.
   // All snapshots should have APD indices with identical sets of keys,
@@ -197,11 +199,8 @@ class GainFunc
     return *it;
   }
 
-  const APDIndexT& APDIndex() const {return fAPDIndex;}
-
  private:
   std::vector<GainSnapshot> fSnapshots;
-  APDIndexT fAPDIndex;
   bool fIsSorted;
 
   void Sort() {
