@@ -1,0 +1,23 @@
+
+The code for the denoising is generally organized into header-only classes or namespaces;
+this doesn't match what most of EXOAnalysis does.  However, it is easier to work with
+the build process when there are no intermediate object files or libraries (helpful particularly
+when we are sometimes seeking a static build), and header-only code offers the maximum
+opportunity for the compiler to do optimizations.
+
+Nevertheless, this doesn't help a new user to separate interface (and particularly the public
+interface) from implementation.  If we want to be serious about this, the right solution
+is to use doxygen or cldoc to extract the interface.  I have attempted to provide extensive
+comments throughout, but you would need to do the work of converting them to markup which
+can be parsed by these programs.
+
+The code is organized as follows:
+* Utilities: helper C++ code which is used elsewhere.
+* NoiseCorrelations: classes related to handling the correlation information for noise on different channels.
+* LightMap: the functions R(x) and S(t) which define APD yield, and related classes.
+* External: code pulled in from elsewhere (currently sqlite).  Consider updating it once in a while.
+* Scripts: python scripts which demonstrate typical usage of the executables and perform other useful functions.
+
+Additionally, some of the code creates or uses a folder called Tmp; output to this directory should not be committed, but may be worth keeping for your own purposes.  For instance, this is where the database of thorium full-energy events gets placed before being built into a lightmap.
+
+Executables themselves are currently put into the base directory, but that may change.
