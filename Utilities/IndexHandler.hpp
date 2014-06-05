@@ -75,6 +75,12 @@ class MapIndexHandler
 
   size_t MaxIndex() const {return fMaxIndex;}
 
+  // For people who need access to the buffer, give it -- but basically that should just be me.
+  const key_type& Buffer() const {
+    assert(MaxIndex() > 0);
+    return fKeys[0];
+  }
+
  private:
   size_t fMaxIndex;
   std::vector<KeyT> fKeys;

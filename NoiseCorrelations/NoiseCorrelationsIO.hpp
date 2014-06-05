@@ -40,43 +40,16 @@ All errors in HDF5 cause termination of the program, with an accompanying error 
 
 #include "NoiseCorrelations/NoiseCorrelations.hpp"
 #include "Utilities/IndexHandler.hpp"
+#include "Utilities/HDF5Helper.hpp"
 #include "hdf5.h"
 #include <vector>
 #include <sstream>
-#include <iostream>
 #include <iomanip>
-#include <cstdlib>
 #include <algorithm>
 #include <cassert>
 
-/*
-When an error occurs in HDF5, print a message, then die;
-I don't want to have to handle failures.
-This allows me to avoid explicitly checking return values throughout.
-*/
-extern "C"
-herr_t custom_HDF5_error_callback(hid_t estack_id, void* /* unused */)
-{
-  H5Eprint2(estack_id, NULL);
-  exit(1);
-  return 1;
-}
-
 namespace NoiseCorrelationIO
 {
-
-/*
-Initialize HDF5 at program initialization to use custom_HDF5_error_callback for errors.
-*/
-struct custom_HDF5_init {
-  custom_HDF5_init() {
-    herr_t ret = H5Eset_auto2(H5E_DEFAULT, &custom_HDF5_error_callback, NULL);
-    if(ret < 0) {
-      std::cerr << "Failed to set HDF5 error callback." << std::endl;
-      exit(1);
-    }
-  }
-} g_custom_HDF5_init;
 
 size_t ExpectedPackedSize(size_t f, size_t UnpackedSize) {
   assert(UnpackedSize % 2 == 0 and UnpackedSize > 0);
@@ -172,23 +145,15 @@ void WriteNoiseCorrelations(std::string filename, const NoiseCorrelations& noise
     unsigned char version = 1;
     hid_t scalarID = H5Screate(H5S_SCALAR);
     hid_t attID = H5Acreate2(fileID, "version", H5T_STD_U8LE, scalarID, H5P_DEFAULT, H5P_DEFAULT);
-    H5Awrite(attID, H5T_NATIVE_UCHAR, reinterpret_cast<void*>(version));
+    H5Awrite(attID, H5T_NATIVE_UCHAR, reinterpret_cast<void*>(&version));
     H5Aclose(attID);
     H5Sclose(scalarID);
   }
 
   // Write the channel index as an ordered list of included channels.
-  {
-    const MapIndexHandler<unsigned char>& chanMap = noise.GetNoiseBlockIndex().MinorIndex();
-    std::vector<unsigned char> chanVec; // Make a buffer to write.
-    for(size_t i = 0; i < chanMap.MaxIndex(); i++) chanVec.push_back(chanMap.KeyForIndex(i));
-    const hsize_t NumChannels = chanMap.MaxIndex();
-    hid_t vectorID = H5Screate_simple(1, &NumChannels, NULL);
-    hid_t attID = H5Acreate2(fileID, "channel_list", H5T_STD_U8LE, vectorID, H5P_DEFAULT, H5P_DEFAULT);
-    H5Awrite(attID, H5T_NATIVE_UCHAR, reinterpret_cast<void*>(&chanVec[0]));
-    H5Aclose(attID);
-    H5Sclose(vectorID);
-  }
+  HDF5Helper::WriteMapAsAttribute(noise.GetNoiseBlockIndex().MinorIndex(),
+                                  fileID,
+                                  "channel_list");
 
   // Write the actual noise information.
   // We choose to write one dataset per frequency, since those are stored in memory as separate arrays.
@@ -249,20 +214,7 @@ void ReadNoiseCorrelations(std::string filename, NoiseCorrelations& noise)
   }
 
   // I have one index for the in-memory noise matrices; build another for the file.
-  MapIndexHandler<unsigned char> FileChannelMap;
-  {
-    hid_t attID = H5Aopen(fileID, "channel_list", H5P_DEFAULT);
-    hid_t spaceID = H5Aget_space(attID);
-    std::vector<unsigned char> tmpChannelMap;
-    tmpChannelMap.resize(H5Sget_simple_extent_npoints(spaceID));
-    H5Aread(attID, H5T_NATIVE_UCHAR, reinterpret_cast<void*>(&tmpChannelMap[0]));
-    for(size_t i = 0; i < tmpChannelMap.size(); i++) {
-      FileChannelMap.InsertKey(tmpChannelMap[i]);
-    }
-    assert(FileChannelMap.MaxIndex() == tmpChannelMap.size());
-    H5Sclose(spaceID);
-    H5Aclose(attID);
-  }
+  MapIndexHandler<unsigned char> FileChannelMap = HDF5Helper::ReadMapFromAttribute(fileID, "channel_list");
   for(size_t i = 0; i < noise.GetNoiseBlockIndex().MaxIndex(); i++) {
     // Verify that the file has correlation information for every channel we're requesting.
     assert(FileChannelMap.HasKey(noise.GetNoiseBlockIndex().KeyForIndex(i).second));

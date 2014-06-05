@@ -19,7 +19,7 @@ GainFunc: Holds S(t, apdNo) for all times as a non-overlapping set of GainSnapsh
 
 namespace LightMap {
 
-const size_t MAX_APDS = 71; // The maximum number of APDs we have ever had or ever will have.
+const unsigned char MAX_APDS = 71; // The maximum number of APDs we have ever had or ever will have.
 
 // Map indexing the actual APDs present.
 typedef MapIndexHandler<unsigned char> APDIndexT;
@@ -129,6 +129,10 @@ class GainSnapshot
 
   const APDIndexT& APDIndex() const {return fAPDIndex;}
 
+  int FirstRun() const {return fFirstRun;}
+
+  int LastRun() const {return fLastRun;}
+
  private:
   APDIndexT fAPDIndex;
   FuncVsAPD fData;
@@ -151,12 +155,22 @@ class GainFunc
   // All snapshots should have APD indices with identical sets of keys,
   // though the ordering may differ.
   void InsertGain(const GainSnapshot& snapshot) {
-    assert(snapshot.APDIndex().MaxIndex() == fAPDIndex.MaxIndex());
-    for(size_t i = 0; i < fAPDIndex.MaxIndex(); i++) {
-      assert(snapshot.APDIndex().HasKey(fAPDIndex.KeyForIndex(i)));
+    if(NumSnapshots() > 0) {
+      // In assertions, verify that the APD index is consistent with what we already have.
+      assert(snapshot.APDIndex().MaxIndex() == fSnapshots[0].APDIndex().MaxIndex());
+      for(size_t i = 0; i < fSnapshots[0].APDIndex().MaxIndex(); i++) {
+        assert(snapshot.APDIndex().HasKey(fSnapshots[0].APDIndex().KeyForIndex(i)));
+      }
     }
     fSnapshots.push_back(snapshot);
     fIsSorted = false;
+  }
+
+  size_t NumSnapshots() const {return fSnapshots.size();}
+
+  const GainSnapshot& GainAtIndex(size_t index) const {
+    assert(index < fSnapshots.size());
+    return fShapshots[index];
   }
 
   const GainSnapshot& GainForRun(int run) const {
@@ -167,6 +181,8 @@ class GainFunc
     assert(not (*it > run)); // Verify that it really is in the range.
     return *it;
   }
+
+  const APDIndexT& APDIndex() const {return fAPDIndex;}
 
  private:
   std::vector<GainSnapshot> fSnapshots;

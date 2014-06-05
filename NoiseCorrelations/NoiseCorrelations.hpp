@@ -104,6 +104,5 @@ class NoiseCorrelations
   FrequencyIndexT fFreqIndex;
   NoiseBlockIndexT fBlockIndex;
   std::vector<NoiseMatrix> fMatrices;
-
 };
 #endif
