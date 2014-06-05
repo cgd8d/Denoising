@@ -56,38 +56,53 @@ class PositionFunc
 
   // When you construct the position map, you should already know what binning you're
   // using and which APDs are present.
-  PositionFunc(const APDIndexT& apd_index,
-               double xmin, double xmax, size_t nx,
-               double ymin, double ymax, size_t ny,
-               double zmin, double zmax, size_t nz)
-  : fPosIndex(ProductIndexHandler(IntervalIndexHandler(xmin, xmax, nx),
-                                  IntervalIndexHandler(xmin, xmax, nx)),
-              IntervalIndexHandler(zmin, zmax, nz)),
-    fAPDIndex(apd_index),
-    fData(fPosIndex.MaxIndex())
-  {
-    assert(fAPDIndex.MaxIndex() <= MAX_APDS);
+  PositionFunc()
+  : fPosIndex(ProductIndexHandler(IntervalIndexHandler(0, 1, 1),
+                                  IntervalIndexHandler(0, 1, 1)),
+              IntervalIndexHandler(0, 1, 1)),
+    fIsInitialized(false)
+  { }
+
+  void SetBinning(double xmin, double xstep, size_t nx,
+                  double ymin, double ystep, size_t ny,
+                  double zmin, double zstep, size_t nz) {
+    fPosIndex = PosIndexT(ProductIndexHandler(IntervalIndexHandler(xmin, xstep, nx),
+                                              IntervalIndexHandler(ymin, ystep, ny)),
+                          IntervalIndexHandler(zmin, zstep, nz));
+    fData.resize(fPosIndex.MaxIndex());
+    fIsInitialized = true;
+  }
+
+  void SetAPDIndex(const APDIndexT& index) {
+    assert(index.MaxIndex() <= MAX_APDS);
+    fAPDIndex = index;
   }
 
   double& GetValAt(size_t pos_index, size_t apd_index) {
     assert(pos_index < fPosIndex.MaxIndex());
     assert(apd_index < fAPDIndex.MaxIndex());
+    assert(fIsInitialized);
     return fData[pos_index][apd_index];
   }
 
   const double& GetValAt(size_t pos_index, size_t apd_index) const {
     assert(pos_index < fPosIndex.MaxIndex());
     assert(apd_index < fAPDIndex.MaxIndex());
+    assert(fIsInitialized);
     return fData[pos_index][apd_index];
   }
 
-  const PosIndexT& PosIndex() const {return fPosIndex;}
+  const PosIndexT& PosIndex() const {
+    assert(fIsInitialized);
+    return fPosIndex;
+  }
 
   const APDIndexT& APDIndex() const {return fAPDIndex;}
 
  private:
   PosIndexT fPosIndex;
   APDIndexT fAPDIndex;
+  bool fIsInitialized;
   std::vector<FuncVsAPD> fData;
 };
 

@@ -78,7 +78,7 @@ class NoiseCorrelations
   // Everything else we can set up for you.
   // All correlations are initialized to zero automatically by the resize.
   NoiseCorrelations(const MapIndexHandler<unsigned char>& channelIndex)
-    : fFreqIndex(double(1.)/(2048*CLHEP::microsecond), double(0.5)/CLHEP::microsecond, 1024),
+    : fFreqIndex(double(1.)/(2048*CLHEP::microsecond), double(1.)/(2048*CLHEP::microsecond), 1024),
       fBlockIndex(RangeIndexHandler<unsigned char>(0, 2), channelIndex)
   {
     fMatrices.resize(fFreqIndex.MaxIndex(), NoiseMatrix(fBlockIndex));

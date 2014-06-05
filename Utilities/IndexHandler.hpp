@@ -88,25 +88,19 @@ class MapIndexHandler
 };
 
 /*
-For an interval [a,b] and N indices, translate index:
-i -> a + (b-a)*i/(N-1), for i = 0 .. N-1.
-This means we divide the interval into N even pieces and index including a and b.
-Mainly this is useful for indexing frequency and keeping track of the meanings of frequency.
-It is also used for indexing position in the lightmap.
-(There is a conflict of semantics there -- noise is evaluated at frequency values,
-while the lightmap is histogrammed inside position bins.  The choice that both ends of
-the interval are inclusive is easier for frequency, but means you must be careful with the
-out-of-range testing for the lightmap.)
+Translate between index and points in an interval [a,b].
+We specify a, the number of points, and the step between them; so
+the last point will be a+(NumIndices-1)*step.
 */
 class IntervalIndexHandler
 {
  public:
   typedef double key_type;
 
-  IntervalIndexHandler(double start, double end, size_t NumIndices)
+  IntervalIndexHandler(double start, double step, size_t NumIndices)
     : fMaxIndex(NumIndices),
       fStart(start),
-      fStepSize((end-start)/NumIndices)
+      fStepSize(step)
   {
     assert(fStepSize > 0 and fMaxIndex > 0);
   }
@@ -131,7 +125,7 @@ class IntervalIndexHandler
   }
 
   double Start() const {return fStart;}
-  double End() const {return fStart + fMaxIndex*fStepSize;}
+  double End() const {return fStart + (fMaxIndex-1)*fStepSize;}
   double StepSize() const {return fStepSize;}
 
  private:
