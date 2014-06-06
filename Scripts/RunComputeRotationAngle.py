@@ -29,7 +29,7 @@ for runInfo in ds:
         finishedProcs = filter(lambda x: x[0].returncode != None, proc)
         for p in finishedProcs:
             proc.remove(p)
-            if p[0].returncode != 0: print "Run %04i failed." % p[1]
+            if p[0].returncode != 0: print "Run %08i failed." % p[1]
         if len(proc) > 50: time.sleep(10) # Just to avoid burning cycles for no reason.
 
     if (runNo == 5322 or runNo == 5323 or
@@ -42,7 +42,7 @@ for runInfo in ds:
         continue
     # Submit the job.
     proc.append((subprocess.Popen(['bsub', '-q', 'xlong', '-R', 'rhel60', '-K',
-                                   '-o', os.path.join(OutDir, 'RotationAngle_%04i.log' % runNo),
+                                   '-o', os.path.join(OutDir, 'RotationAngle_%08i.log' % runNo),
                                    'python',
                                    'Scripts/ComputeRotationAngle.py', str(runNo)],
                  runNo))
@@ -51,5 +51,5 @@ for runInfo in ds:
 # Many won't produce output databases, for good reasons; we'll just omit them and interpolate the gain.
 for p in proc:
     p[0].wait()
-    if p[0].returncode != 0: print "Run %04i failed." % p[1]
+    if p[0].returncode != 0: print "Run %08i failed." % p[1]
 print "Done."

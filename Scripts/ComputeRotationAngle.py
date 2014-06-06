@@ -80,7 +80,7 @@ def FindPeak(dataSet):
     except PeakFinderError:
         canvas = ROOT.TCanvas()
         hist.Draw()
-        canvas.Print('ComputeRotationAngle_oldversion/FailedToFindPeak%04i.pdf' % RunNumber)
+        canvas.Print('ComputeRotationAngle_oldversion/FailedToFindPeak%08i.pdf' % RunNumber)
         raise
 
 def DoFit(dataSet, PeakPosGuess, SigmaGuess, ErfcFracGuess, ID = None):
@@ -338,7 +338,7 @@ if __name__ == '__main__':
     LastTree = LastFile.Get('tree')
     ControlRecordList = LastTree.GetUserInfo().At(1)
 
-    result = Run('Tmp/ComputeRotationAngle_oldversion/RotationAngle_%04i' % int(sys.argv[1]),
+    result = Run('Tmp/ComputeRotationAngle_oldversion/RotationAngle_%08i' % int(sys.argv[1]),
                  EventTree=EventTree, ControlRecordList=ControlRecordList)
     print result
 

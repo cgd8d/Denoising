@@ -30,6 +30,8 @@ On SLAC, from the base directory of this repository, run:
 
 1) bsub -q xlong -R rhel60 -o RunComputeRotationAngle.log python Scripts/RunComputeRotationAngle.py
 
-The purpose of this script (which calls ComputeRotationAngle.py) is to locate the thorium peak position and optimal angle.  We already run ComputeRotationAngle.py -- a different version -- on the pipeline, but that version only takes events with nsc = 1 so it is not correct for strong source runs.  Someone should fix this, and then we wouldn't have to rerun it over all data ourselves.
+The purpose of this script (which calls ComputeRotationAngle.py) is to locate the thorium peak position and optimal angle.  We already run ComputeRotationAngle.py -- a different version -- on the pipeline, but that version only takes events with nsc = 1 so it is not correct for strong source runs.  Someone should fix this, and then we wouldn't have to rerun it over all data ourselves.  If you do fix it, be careful -- currently we trust the ComputeRotationAngle script to reject non-Th runs, but if someone else's version works on non-Th runs then we'll need to do the check elsewhere.
+
+This script does not expect every run to succeed; some fail for good reasons.  However, any run which fails will not be included in the lightmap, so it would be good to make it as robust as possible.
 
 ...STILL WRITING THIS PART OF THE DOCUMENTATION...
