@@ -21,3 +21,15 @@ The code is organized as follows:
 Additionally, some of the code creates or uses a folder called Tmp; output to this directory should not be committed, but may be worth keeping for your own purposes.  For instance, this is where the database of thorium full-energy events gets placed before being built into a lightmap.
 
 Executables themselves are currently put into the base directory, but that may change.
+
+
+===============================================================================
+TO GENERATE A LIGHTMAP
+
+On SLAC, from the base directory of this repository, run:
+
+1) bsub -q xlong -R rhel60 -o RunComputeRotationAngle.log python Scripts/RunComputeRotationAngle.py
+
+The purpose of this script (which calls ComputeRotationAngle.py) is to locate the thorium peak position and optimal angle.  We already run ComputeRotationAngle.py -- a different version -- on the pipeline, but that version only takes events with nsc = 1 so it is not correct for strong source runs.  Someone should fix this, and then we wouldn't have to rerun it over all data ourselves.
+
+...STILL WRITING THIS PART OF THE DOCUMENTATION...
