@@ -9,19 +9,17 @@ import Common
 import os
 import sqlite3
 import re
+import math
 import ROOT
 ROOT.gROOT.SetBatch()
 ROOT.gSystem.Load("libEXOUtilities")
 ROOT.gSystem.Load("libEXOCalibUtilities")
 
-# modules below this line may not actually be needed.
-import sys
-import math
-
 # Create an empty sqlite3 database to hold event information.
 conn = sqlite3.connect('Tmp/ThoriumLightmapEvents.db')
 conn.execute('CREATE TABLE events (runRange integer, xpos real, ypos real, zpos real, ' +
                                    ', '.join(['apd_%03i_magnitude real' % apd for apd in Common.APDs]) + ')')
+InsertStmt = 'INSERT INTO events VALUES (%s)' % ','.join(['?']*(4 + len(Common.APDs)))
 
 # Make a list of ComputeRotationAngle log files.
 LogFileDir = 'Tmp/ComputeRotationAngle_oldversion'
@@ -47,6 +45,18 @@ NumRunsCut_RotAngleFailed = 0
 NumRunsCut_Res = 0
 NumRunsCut_PeakPos = 0
 NumRunsUsed = 0
+NumEntriesTotal = 0
+NumEntriesCut_Noise = 0
+NumScintTotal = 0
+NumScintCut_MS = 0
+NumScintCut_NumWires = 0
+NumScintCut_Energy = 0
+NumScintCut_AmbiguousCharge = 0
+NumScintCut_Separation = 0
+NumScintCut_Suspicious = 0
+NumScintCut_Diag = 0
+NumScintCut_NearEdge = 0
+NumScintUsed = 0
 
 # Now iterate through the log files and add entries to the database as available.
 for logfilename in ListOfLogFiles:
@@ -110,166 +120,145 @@ for logfilename in ListOfLogFiles:
         continue
 
     # If we've made it to this point, the run will be used.
+    print "Using run %i." % runNo
     NumRunsUsed += 1
 
+    # Get a cursor for the database.
+    cursor = conn.cursor()
 
+    for i in xrange(chain.GetEntries()):
+        chain.GetEntry(i)
+        NumEntriesTotal += 1
 
-####################
-# BELOW THIS POINT, STILL IN PROGRESS.
-####################
+        if event.fEventHeader.fTaggedAsNoise:
+            NumEntriesCut_Noise += 1
+            continue
 
+        for iscint in range(event.GetNumScintillationClusters()):
+            scint = event.GetScintillationCluster(iscint)
+            NumScintClustersTotal += 1
 
+            # If it's not SS, throw it away.
+            if scint.GetNumChargeClusters() != 1:
+                NumScintCut_MS += 1
+                continue
+            charge = scint.GetChargeClusterAt(0)
 
+            # If it has u-wire signals on more than two distinct channels, it's not SS.
+            if len(set(charge.GetUWireSignalAt(j).fChannel for j in range(charge.GetNumUWireSignals()))) > 2:
+                NumScintCut_NumWires += 1
+                continue
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-for i in xrange(chain.GetEntries()):
-    if i % 1000 == 0: print "Getting entry %i." % i
-    chain.GetEntry(i)
-
-    if event.fEventHeader.fTaggedAsNoise: continue
-
-    for iscint in range(event.GetNumScintillationClusters()):
-        scint = event.GetScintillationCluster(iscint)
-        TotalScint += 1
-
-        # If it's not SS, throw it away.
-        if scint.GetNumChargeClusters() != 1: continue
-        NumChargeClusters += 1
-        charge = scint.GetChargeClusterAt(0)
-        if len(set(charge.GetUWireSignalAt(j).fChannel for j in range(charge.GetNumUWireSignals()))) > 2:
-            continue # If it has more than 2 distinct u-wire signals, it's not SS.
-        NumUWires += 1
-
-        # Use the best-available energy estimate to select full-energy events.
-        if charge.fZ < 0:
-            corr_factor = 0.938 + 0.6892*pow(abs(charge.fZ)/1000, 1.716)
-        else:
-            corr_factor = 0.9355 + 1.289*pow(abs(charge.fZ)/1000, 2.004)
-        if UseDenoised:
+            # Compute anticorrelated energy.
+            if charge.fZ < 0:
+                corr_factor = 0.938 + 0.6892*pow(abs(charge.fZ)/1000, 1.716)
+            else:
+                corr_factor = 0.9355 + 1.289*pow(abs(charge.fZ)/1000, 2.004)
             scintE = scint.fDenoisedEnergy/corr_factor
-        else:
-            scintE = scint.fRawEnergy
-        AntiCorrE = charge.fPurityCorrectedEnergy*math.cos(Theta) + scintE*math.sin(Theta)
-        Sigmas = (AntiCorrE - PeakPos)/(Res*PeakPos)
-        if abs(Sigmas) > 1: continue
-        EnergyCut += 1
+            AntiCorrE = charge.fPurityCorrectedEnergy*math.cos(theta) + scintE*math.sin(theta)
 
-        # Verify that all charge can be assigned unambiguously, at least with reference to this scintillation.
-        charge_OK = True
-        for icharge in range(event.GetNumChargeClusters()):
-            chargeTime = event.GetChargeCluster(icharge).fCollectionTime
-            if Utilities.CanPair(scint.fTime, chargeTime):
-                # OK, this charge could be associated to this scint.
-                # Can it be associated to any other scint?
-                for jscint in range(event.GetNumScintillationClusters()):
-                    if iscint == jscint: continue
-                    if Utilities.CanPair(event.GetScintillationCluster(jscint).fTime, chargeTime):
-                        charge_OK = False
-                        break
-            if not charge_OK: break
-        if not charge_OK: continue
-        UnambiguousCharge += 1
+            # Accept events within 1.5sigma of the peak.
+            Sigmas = (AntiCorrE - peakpos)/(resol*peakpos)
+            if abs(Sigmas) > 1.5:
+                NumScintCut_Energy += 1
+                continue
 
-        # Verify that it is well-separated from other scintillation.
-        # Here we are overly aggressive, but we want enough space to have a good baseline.
-        well_separated = True
-        for jscint in range(event.GetNumScintillationClusters()):
-            if iscint == jscint: continue
-            if scint.fTime > event.GetScintillationCluster(jscint).fTime:
-                # Ensure that pretrace is protected.
-                tdiff = scint.fTime - event.GetScintillationCluster(jscint).fTime
-                if tdiff < (Utilities.ModelPretrace + Utilities.DiffTime)*ROOT.CLHEP.microsecond:
+            # Verify that all charge can be assigned unambiguously.
+            # In other words, there are no charge clusters which *could* come from this scint
+            # and this charge cluster can't belong to any other scint clusters.
+            charge_OK = True
+            for jscint in range(event.GetNumScintillationClusters()):
+                if jscint == iscint: continue
+                drift_time = charge.fCollectionTime - event.GetScintillationCluster(jscint).fTime
+                if drift_time > -5*ROOT.CLHEP.microsecond and drift_time < 120*ROOT.CLHEP.microsecond:
+                    charge_OK = False
+                    break
+            if not charge_OK:
+                NumScintCut_AmbiguousCharge += 1
+                continue
+            for icharge in range(event.GetNumChargeClusters()):
+                if event.GetChargeCluster(icharge) == charge: continue
+                chargeTime = event.GetChargeCluster(icharge).fCollectionTime
+                drift_time = chargeTime - scint.fTime
+                if drift_time > -5*ROOT.CLHEP.microsecond and drift_time < 120*ROOT.CLHEP.microsecond:
+                    charge_OK = False
+                    break
+            if not charge_OK:
+                NumScintCut_AmbiguousCharge += 1
+                continue
+
+            # Verify that it is well-separated from other scintillation.
+            # This is to ensure a good fit for the APD signals (though maybe not really needed?).
+            well_separated = True
+            for jscint in range(event.GetNumScintillationClusters()):
+                if iscint == jscint: continue
+                diff_time = scint.fTime - event.GetScintillationCluster(jscint).fTime
+                if abs(diff_time) < 150*ROOT.CLHEP.microsecond:
                     well_separated = False
                     break
-            else:
-                # Ensure that posttrace is protected.
-                tdiff = event.GetScintillationCluster(jscint).fTime - scint.fTime
-                if tdiff < Utilities.ModelPosttrace*ROOT.CLHEP.microsecond:
-                    well_separated = False
-                    break
-        if not well_separated: continue
-        ScintSeparation += 1
+            if not well_separated:
+                 NumScintCut_Separation += 1
+                 continue
 
-        # Basic good properties of the charge and scint clusters.
-        if charge.fPurityCorrectedEnergy < 1: continue
-        if charge.fPurityCorrectedEnergy > 5000: continue
-        if abs(charge.fX) > 500 or abs(charge.fY) > 500: continue
-        if not any(map(lambda z_range: charge.fZ >= z_range[0] and charge.fZ < z_range[1], FiducialZ_Ranges)):
-            continue
-        if UseDenoised:
-            if scint.fEnergy < 1 or scint.fEnergy > 15000: continue
-        else:
-            if scint.fRawEnergy < 1 or scint.fRawEnergy > 15000: continue
-        BasicChargeProperties += 1
+            # Verify basic good properties of the charge.
+            # (Should add a check on the light range as well.)
+            if (charge.fPurityCorrectedEnergy < 1 or
+                charge.fPurityCorrectedEnergy > 5000 or
+                abs(charge.fX) > 500 or abs(charge.fY) > 500 or abs(charge.fZ) > 500):
+                NumScintCut_Suspicious += 1
+                continue
 
-        # Passes diagonal cut.
-        diagCut = calibManager.getCalib("diagonal-cut", "vanilla", event.fEventHeader)
-        if UseDenoised:
+            # Passes diagonal cut.
+            diagCut = calibManager.getCalib("diagonal-cut", "2013-0nu-denoised", event.fEventHeader)
             if not diagCut.SurvivesSingleSiteCut(scint.fEnergy, charge.fPurityCorrectedEnergy): continue
-        else:
-            if not diagCut.SurvivesSingleSiteCut(scint.fRawEnergy, charge.fPurityCorrectedEnergy): continue
-        DiagonalCut += 1
+                NumScintCut_Diag += 1
+                continue
 
-        # Compute the dot-product and integral of the raw waveforms with our model.
-        SignalIndex = int(scint.fTime/ROOT.CLHEP.microsecond + 0.5)
-        FirstIndex = SignalIndex - Utilities.ModelPretrace
-        LastIndex = SignalIndex + Utilities.ModelPosttrace
-        if FirstIndex < 0 or LastIndex > event.fEventHeader.fSampleCount + 1:
-            NearEdge += 1
-            continue
-        WaveformMagnitudes = []
-        for apd in Utilities.APDs:
-            APDsignal = scint.GetAPDSignal(ROOT.EXOAPDSignal.kGangFit, apd)
-            if APDsignal == None:
-                amplitude = 0.
-            else:
-                scaling_factor = ROOT.APD_ADC_FULL_SCALE_ELECTRONS/(ROOT.ADC_BITS*ROOT.APD_GAIN)
-                amplitude = APDsignal.fRawCounts / scaling_factor
-            WaveformMagnitudes.append(amplitude)
+            # Check that the time of the scintillation is not near the edge of the waveform.
+            if (scint.fTime < 150*ROOT.CLHEP.microsecond or
+                scint.fTime > (event.fEventHeader.fSampleCount-150)*ROOT.CLHEP.microsecond):
+                NumScintCut_NearEdge += 1
+                continue
 
-        # Add it to our list; we want to update the database in one big operation.
-        Entries.append( (Utilities.IndexOfRun(event.fRunNumber),
-                         Utilities.GetBinAtPoint(charge.fX, charge.fY, charge.fZ)) +
-                        tuple(WaveformMagnitudes))
+            # OK, we will use this scint cluster.
+            NumScintUsed += 1
 
-# Print statistics for why we lost events.
-print "TotalScint =", TotalScint
-print "NumChargeClusters =", NumChargeClusters
-print "NumUWires =", NumUWires
-print "EnergyCut =", EnergyCut
-print "UnambiguousCharge =", UnambiguousCharge
-print "ScintSeparation =", ScintSeparation
-print "NearEdge =", NearEdge
-print "BasicChargeProperties =", BasicChargeProperties
-print "DiagonalCut =", DiagonalCut
+            # Prepare an sql row, and insert it.
+            # Note that we use the fit magnitude from reconstruction, which is undenoised;
+            # denoised individual-APD magnitudes could improve the quality of the lightmap.
+            RowToInsert = [runNo, cluster.fX, cluster.fY, cluster.fZ]
+            scaling_factor = ROOT.APD_ADC_FULL_SCALE_ELECTRONS/(ROOT.ADC_BITS*ROOT.APD_GAIN)
+            for apd in Common.APDs:
+                APDsignal = scint.GetAPDSignal(ROOT.EXOAPDSignal.kGangFit, apd)
+                if APDsignal == None: RowToInsert.append(0.)
+                else: RowToInsert.append(APDsignal.fRawCounts/scaling_factor)
+            cursor.execute(InsertStmt, RowToInsert)
 
-if len(Entries) < 200:
-    print "Not enough accepted events in the run (%i)." % len(Entries)
-    sys.exit("Not enough events accepted.")
+    # At the end of each run, commit the transaction.
+    conn.commit()
 
-dbname = os.path.join('PassingEvents', 'PassingEvents%s_%04i.db' % (segment_str, runNo))
-conn = sqlite3.connect(dbname)
-c = conn.cursor()
-TableList = ('runRange integer, posBin integer,' +
-             ', '.join(['apd_' + str(apd) + '_signal real' for apd in Utilities.APDs]))
-c.execute('CREATE TABLE events (' + TableList + ')')
-c.executemany('INSERT INTO events VALUES (' +
-              ','.join(['?']*(2 + len(Utilities.APDs))) +
-              ')', Entries)
-conn.commit()
 conn.close()
 
-print "Done."
+# Print run statistics.
+print
+print "STATISTICS:"
+print "There were %i runs which were potentially usable Th runs." % NumRunsTotal
+print "\t%i cut due to missing calibrations." % NumRunsCut_NoCalib
+print "\t%i cut because the rotation angle script did not finish." % NumRunsCut_RotAngleFailed
+print "\t%i cut because the resolution was unreasonable." % NumRunsCut_Res
+print "\t%i cut because the peak position was unreasonable." % NumRunsCut_PeakPos
+print "%i runs were actually used." % NumRunsUsed
+print
+print "These runs contained % events (total)." % NumEntriesTotal
+print "\t%i were cut due to being tagged as noise." % NumEntriesCut_Noise
+print "The acceptable events contained %i scint clusters (before additional cuts)." % NumScintTotal
+print "\t%i were cut as multi-site (multiple charge clusters)." % NumScintCut_MS
+print "\t%i were cut for hitting too many u-wires." % NumScintCut_NumWires
+print "\t%i were cut for not being near enough to 2615 keV." % NumScintCut_Energy
+print "\t%i were cut because charge/scint clustering was ambiguous." % NumScintCut_AmbiguousCharge
+print "\t%i were cut because another scint cluster was too close." % NumScintCut_Separation
+print "\t%i were cut because the amount of charge looked suspicious." % NumScintCut_Suspicious
+print "\t%i were cut because they failed the diagonal cut." % NumScintCut_Diag
+print "\t%i were cut because they were too close to the waveform edge." % NumScintCut_NearEdge
+print "%i scintillation clusters were deemed usable for the lightmap." % NumScintUsed
+
