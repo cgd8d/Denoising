@@ -12,6 +12,9 @@ function static_link() {
 echo "-Wl,-Bstatic -l$1 -Wl,-Bdynamic"
 }
 
+# Building noise correlation generation program.
 g++ -O3 -o ComputeNoiseCorrelations -I. -I$HDF5_INCDIR `exo-config --cflags` -L`exo-config --libdir` -L$HDF5_LIBDIR ComputeNoiseCorrelations.C `static_link hdf5` -lEXOUtilities
 
-g++ -O3 -o BuildLightMap -I. -I$HDF5_INCDIR `exo-config --cflags` -L`exo-config --libdir` -L$HDF5_LIBDIR BuildLightMap.C `static_link hdf5` -lEXOUtilities
+# Building lightmap construction program.
+gcc -O3 -o External/sqlite3.o -DSQLITE_THREADSAFE=0 -c External/sqlite3.c
+g++ -O3 -o BuildLightMap -I. -I$HDF5_INCDIR -L$HDF5_LIBDIR BuildLightMap.C External/sqlite3.o `static_link hdf5` -lz -ldl

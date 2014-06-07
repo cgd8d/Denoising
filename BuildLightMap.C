@@ -11,7 +11,7 @@ are workarounds if necessary.
 #include "LightMap/LightMap.hpp"
 #include "LightMap/LightMapIO.hpp"
 #include "Utilities/IndexHandler.hpp"
-#include "External/sqlite3.c"
+#include "External/sqlite3.h"
 #include <sstream>
 #include <iostream>
 #include <cstdlib>
@@ -80,7 +80,7 @@ int main()
   QueryColumns << " FROM events WHERE ";
 
   // Prepare statements to retrieve by position or by run range.
-  sqlite3_stmt* prep_stmt_pos, prep_stmt_run;
+  sqlite3_stmt *prep_stmt_pos, *prep_stmt_run;
   ret = sqlite3_prepare_v2(connection,
                            std::string("SELECT runNo, " + QueryColumns.str() +
                                        "? <= xpos AND xpos < ? AND " +
