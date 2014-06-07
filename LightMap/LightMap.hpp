@@ -68,6 +68,8 @@ class PositionFunc
     fIsInitialized(false)
   { }
 
+  // Position binning to use, in units of mm.
+  // Shouldn't change this once the map is filled.
   void SetBinning(double xmin, double xstep, size_t nx,
                   double ymin, double ystep, size_t ny,
                   double zmin, double zstep, size_t nz) {
@@ -181,6 +183,12 @@ class GainFunc
     }
     fSnapshots.push_back(snapshot);
     fIsSorted = false;
+  }
+
+  // Convenience function to make a temporary snapshot and insert it.
+  void InsertGain(const APDIndexT& index, int first_run, int last_run) {
+    GainSnapshot gain(index, first_run, last_run);
+    InsertGain(gain);
   }
 
   size_t NumSnapshots() const {return fSnapshots.size();}

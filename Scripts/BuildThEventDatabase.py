@@ -17,7 +17,7 @@ ROOT.gSystem.Load("libEXOCalibUtilities")
 
 # Create an empty sqlite3 database to hold event information.
 conn = sqlite3.connect('Tmp/ThoriumLightmapEvents.db')
-conn.execute('CREATE TABLE events (runRange integer, xpos real, ypos real, zpos real, ' +
+conn.execute('CREATE TABLE events (runNo integer, xpos real, ypos real, zpos real, ' +
                                    ', '.join(['apd_%03i_magnitude real' % apd for apd in Common.APDs]) + ')')
 InsertStmt = 'INSERT INTO events VALUES (%s)' % ','.join(['?']*(4 + len(Common.APDs)))
 
@@ -236,6 +236,17 @@ for logfilename in ListOfLogFiles:
 
     # At the end of each run, commit the transaction.
     conn.commit()
+
+# Build indices.
+print "Building indices."
+conn.execute('CREATE INDEX x_index ON events (xpos)')
+conn.execute('CREATE INDEX y_index ON events (ypos)')
+conn.execute('CREATE INDEX z_index ON events (zpos)')
+conn.execute('CREATE INDEX run_index ON events (runNo)')
+conn.execute('ANALYZE events') # Helps sqlite pick which index to use intelligently.
+# Note: we could be more intelligent if we used a version of sqlite3 compiled
+# with the SQLITE_ENABLE_STAT4 macro.  But this is awkward to do from the python interface.
+print "Done building indices."
 
 conn.close()
 

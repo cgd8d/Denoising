@@ -108,7 +108,7 @@ class IntervalIndexHandler
   size_t MaxIndex() const {return fMaxIndex;}
 
   key_type KeyForIndex(size_t index) const {
-    assert(index < fMaxIndex);
+    assert(index <= fMaxIndex); // Allow query for the upper edge of the last index.
     return fStart + fStepSize*index;
   }
 
