@@ -9,8 +9,9 @@ import ROOT
 ROOT.gROOT.SetBatch()
 ROOT.gSystem.Load("libEXOUtilities")
 
-# Grab all source datasets from the data catalog.  We'll need to select out the Th ones later.
+# Grab all source datasets from the data catalog.
 # Note we use a few suspect runs, so we have to run this script over those too.
+# Note: is there a filter, or could there be one, for picking out Th runs specifically?
 ds = ROOT.EXORunInfoManager.GetDataSet("Data/Processed/masked", "quality!=\"BAD\"&&run>=2401&&run<=5892&&runType==\"Data-Source calibration\"")
 
 # Create the needed directories, and ensure they are empty.
@@ -32,11 +33,6 @@ for runInfo in ds:
             if p[0].returncode != 0: print "Run %08i failed." % p[1]
         if len(proc) > 50: time.sleep(10) # Just to avoid burning cycles for no reason.
 
-    if (runNo == 5322 or runNo == 5323 or
-        runNo >= 5325 and runNo <= 5336):
-        # These are radium runs, but for now they are misidentified as Th.
-        # This should be patched soon, but for now explicitly skip them (because the script won't).
-        continue
     if runNo == 4435:
         # This is a Cs run misidentified as Th.  (Need to get Tony to patch this.)
         continue

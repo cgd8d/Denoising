@@ -113,14 +113,13 @@ class IntervalIndexHandler
   }
 
   // Return the largest index such that KeyForIndex(index) <= key.
-  // If key < start, return size_t(-1).
-  // If key > end, we still return MaxIndex()-1.
+  // If key < start or key >= end, return size_t(-1).
   size_t IndexForKey(key_type key) const {
     key -= fStart;
     key /= fStepSize;
     if(key < 0) return size_t(-1); // Defer to here to avoid floating-point issues.
     size_t entry = size_t(key);
-    if(entry >= fMaxIndex) return fMaxIndex-1;
+    if(entry >= fMaxIndex) return size_t(-1);
     return entry;
   }
 
@@ -209,6 +208,7 @@ class ProductIndexHandler
   size_t IndexForKey(key_type key) const {
     size_t k1 = fMajorIndex.IndexForKey(key.first);
     size_t k2 = fMinorIndex.IndexForKey(key.second);
+    if(k1 >= fMajorIndex.MaxIndex() or k2 >= fMinorIndex.MaxIndex()) return size_t(-1);
     return k1*fMinorIndex.MaxIndex() + k2;
   }
 

@@ -9,6 +9,7 @@ are workarounds if necessary.
 */
 
 #include "LightMap/LightMap.hpp"
+#include "LightMap/LightMapIO.hpp"
 #include "Utilities/IndexHandler.hpp"
 #include "External/sqlite3.c"
 #include <sstream>
@@ -176,9 +177,66 @@ int main()
     std::cout << "Done computing the position function." << std::endl;
     std::cout << "Computing the gain function, holding the position function fixed." << std::endl;
 
+    for(size_t gainBin = 0; gainBin < gainFunc.NumSnapshots(); gainBin++) {
+      LightMap::GainSnapshot& gain = gainFunc.GainAtIndex(gainBin);
 
+      // Bind the run range parameters to the query.
+      bool success = (
+        sqlite3_bind_int(prep_stmt_run, 1, gain.FirstRun()) == SQLITE_OK and
+        sqlite3_bind_int(prep_stmt_pos, 2, gain.LastRun()) == SQLITE_OK);
+      if(not success) {
+        std::cerr << "Failed to bind values to a select statement." << std::endl;
+        exit(1);
+      }
 
+      // Retrieve all events which fall in this bin.
+      // For each APD, we wish to compute the weighted sum of magnitudes
+      // and the sum of square weights.
+      LightMap::FuncVsAPD WeightedSumMagnitudes;
+      LightMap::FuncVsAPD SumSquareWeights;
+      for(size_t i = 0; i < APDIndex.MaxIndex(); i++) {
+        WeightedSumMagnitudes[i] = 0;
+        SumSquareWeights[i] = 0;
+      }
+      while((ret = sqlite3_step(prep_stmt_run)) == SQLITE_ROW) {
+        // Handle a row.
+        double xpos = sqlite3_column_double(prep_stmt_run, 0);
+        double ypos = sqlite3_column_double(prep_stmt_run, 1);
+        double zpos = sqlite3_column_double(prep_stmt_run, 2);
 
+        size_t posBin = posFunc.PosIndex().IndexForKey(std::make_pair(std::make_pair(xpos, ypos), zpos));
+        if(posBin >= posFunc.PosIndex().MaxIndex()) continue; // Kills events out of boundary for lightmap.
+        const LightMap::FuncVsAPD& posFuncAtBin = posFunc.GetAllValsAt(posBin);
 
+        for(size_t i = 0; i < APDIndex.MaxIndex(); i++) {
+          // Handle one APD for that row.
+          double weight = posFuncAtBin[i];
+          double apd_magnitude = sqlite3_column_double(prep_stmt_run, 3 + i);
+          WeightedSumMagnitudes[i] += weight*apd_magnitude;
+          SumSquareWeights[i] += weight*weight;
+        }
+      }
+      if(ret != SQLITE_DONE) {
+        std::cerr << "Query returned failure." << std::endl;
+        exit(1);
+      }
+      ret = sqlite3_reset(prep_stmt_run);
+      if(ret != SQLITE_OK) {
+        std::cerr << "Failed to reset a statement." << std::endl;
+        exit(1);
+      }
 
+      // Update the gain snapshot, overwriting the old ones.
+      for(size_t i = 0; i < APDIndex.MaxIndex(); i++) {
+        if(WeightedSumMagnitudes[i] <= 0) gain.GetValAt(i) = 0;
+        else gain.GetValAt(i) = WeightedSumMagnitudes[i]/SumSquareWeights[i];
+      }
+    }
+    std::cout << "Done computing the gain function." << std::endl;
+  } // End loop over iterations.
+
+  // We've generated a good (hopefully) lightmap -- now write it to file.
+  std::cout << "Finished generating lightmap -- write to Tmp/LightMap.hdf5." << std::endl;
+  LightMapIO::WriteLightMap("Tmp/LightMap.hdf5", posFunc, gainFunc);
+  std::cout << "Done writing the lightmap to file.  Have a nice day." << std::endl;
 }

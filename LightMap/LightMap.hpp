@@ -99,6 +99,18 @@ class PositionFunc
     return fData[pos_index][apd_index];
   }
 
+  FuncVsAPD& GetAllValsAt(size_t pos_index) {
+    assert(pos_index < fPosIndex.MaxIndex());
+    assert(fIsInitialized);
+    return fData[pos_index];
+  }
+
+  const FuncVsAPD& GetAllValsAt(size_t pos_index) const {
+    assert(pos_index < fPosIndex.MaxIndex());
+    assert(fIsInitialized);
+    return fData[pos_index];
+  }
+
   const PosIndexT& PosIndex() const {
     assert(fIsInitialized);
     return fPosIndex;
