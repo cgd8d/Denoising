@@ -54,7 +54,7 @@ void WriteMapAsAttribute(const MapIndexHandler<unsigned char>& index, hid_t locI
   const hsize_t size = index.MaxIndex();
   hid_t vectorID = H5Screate_simple(1, &size, NULL);
   hid_t attID = H5Acreate2(locID, name.c_str(), H5T_STD_U8LE, vectorID, H5P_DEFAULT, H5P_DEFAULT);
-  H5Awrite(attID, H5T_NATIVE_UCHAR, reinterpret_cast<void*>(&index.Buffer()));
+  H5Awrite(attID, H5T_NATIVE_UCHAR, reinterpret_cast<const void*>(&index.Buffer()));
   H5Aclose(attID);
   H5Sclose(vectorID);
 }

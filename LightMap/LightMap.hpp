@@ -62,8 +62,7 @@ class PositionFunc
   // When you construct the position map, you should already know what binning you're
   // using and which APDs are present.
   PositionFunc()
-  : fPosIndex(ProductIndexHandler(IntervalIndexHandler(0, 1, 1),
-                                  IntervalIndexHandler(0, 1, 1)),
+  : fPosIndex(XYPosIndexT(IntervalIndexHandler(0, 1, 1), IntervalIndexHandler(0, 1, 1)),
               IntervalIndexHandler(0, 1, 1)),
     fIsInitialized(false)
   { }
@@ -73,8 +72,8 @@ class PositionFunc
   void SetBinning(double xmin, double xstep, size_t nx,
                   double ymin, double ystep, size_t ny,
                   double zmin, double zstep, size_t nz) {
-    fPosIndex = PosIndexT(ProductIndexHandler(IntervalIndexHandler(xmin, xstep, nx),
-                                              IntervalIndexHandler(ymin, ystep, ny)),
+    fPosIndex = PosIndexT(XYPosIndexT(IntervalIndexHandler(xmin, xstep, nx),
+                                      IntervalIndexHandler(ymin, ystep, ny)),
                           IntervalIndexHandler(zmin, zstep, nz));
     fData.resize(fPosIndex.MaxIndex());
     fIsInitialized = true;
@@ -119,6 +118,7 @@ class PositionFunc
   const APDIndexT& APDIndex() const {return fAPDIndex;}
 
  private:
+  typedef ProductIndexHandler<IntervalIndexHandler, IntervalIndexHandler> XYPosIndexT;
   PosIndexT fPosIndex;
   APDIndexT fAPDIndex;
   bool fIsInitialized;
@@ -180,7 +180,7 @@ In cases where we need to store gain functions covering all history, store them 
 class GainFunc
 {
  public:
-  GainFunc() : fIsSorted(true) { }
+  GainFunc() { }
 
   // Snapshots must not overlap, but this is checked when the function is used.
   // All snapshots should have APD indices with identical sets of keys,
@@ -194,7 +194,7 @@ class GainFunc
       }
     }
     fSnapshots.push_back(snapshot);
-    fIsSorted = false;
+    Sort(); // Inefficient to call this repeatedly, but generally the effect is negligible.
   }
 
   // Convenience function to make a temporary snapshot and insert it.
@@ -205,13 +205,25 @@ class GainFunc
 
   size_t NumSnapshots() const {return fSnapshots.size();}
 
+  GainSnapshot& GainAtIndex(size_t index) {
+    assert(index < fSnapshots.size());
+    return fSnapshots[index];
+  }
+
   const GainSnapshot& GainAtIndex(size_t index) const {
     assert(index < fSnapshots.size());
-    return fShapshots[index];
+    return fSnapshots[index];
+  }
+
+  GainSnapshot& GainForRun(int run) {
+    std::vector<GainSnapshot>::iterator it =
+      std::lower_bound(fSnapshots.begin(), fSnapshots.end(), run);
+    assert(it != fSnapshots.end());
+    assert(not (*it > run)); // Verify that it really is in the range.
+    return *it;
   }
 
   const GainSnapshot& GainForRun(int run) const {
-    if(not fIsSorted) Sort();
     std::vector<GainSnapshot>::const_iterator it =
       std::lower_bound(fSnapshots.begin(), fSnapshots.end(), run);
     assert(it != fSnapshots.end());
@@ -221,15 +233,12 @@ class GainFunc
 
  private:
   std::vector<GainSnapshot> fSnapshots;
-  bool fIsSorted;
 
   void Sort() {
-    if(fIsSorted) return;
     std::sort(fSnapshots.begin(), fSnapshots.end());
     for(size_t i = 1; i < fSnapshots.size(); i++) {
       assert(fSnapshots[i-1] < fSnapshots[i]); // Ensure there are no overlaps.
     }
-    fIsSorted = true;
   }
 };
 

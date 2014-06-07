@@ -8,8 +8,8 @@ There are many ancillary functions (and even one object) here; the user will gen
 
 namespace LightMapIO {
 void WriteLightMap(std::string filename, const LightMap::PositionFunc& posFunc, const LightMap::GainFunc& gainFunc);
-LightMap::GainSnapshot ReadLightmapAtRun(std::string filename, int run, LightMap::PosFunc& posFunc);
-LightMap::GainFunc ReadLightmap(std::string filename, LightMap::PosFunc& posFunc);
+LightMap::GainSnapshot ReadLightmapAtRun(std::string filename, int run, LightMap::PositionFunc& posFunc);
+LightMap::GainFunc ReadLightmap(std::string filename, LightMap::PositionFunc& posFunc);
 class GainFuncNotKnown;
 }
 
@@ -40,10 +40,10 @@ void WriteLightMap(std::string filename,
 
   // Write a version number of 1.
   {
-    unsigned char version = 1;
+    const unsigned char version = 1;
     hid_t scalarID = H5Screate(H5S_SCALAR);
     hid_t attID = H5Acreate2(fileID, "version", H5T_STD_U8LE, scalarID, H5P_DEFAULT, H5P_DEFAULT);
-    H5Awrite(attID, H5T_NATIVE_UCHAR, reinterpret_cast<void*>(&version));
+    H5Awrite(attID, H5T_NATIVE_UCHAR, reinterpret_cast<const void*>(&version));
     H5Aclose(attID);
     H5Sclose(scalarID);
   }
@@ -52,7 +52,7 @@ void WriteLightMap(std::string filename,
   {
     hid_t scalarID = H5Screate(H5S_SCALAR);
     hid_t attID = H5Acreate2(fileID, "MAX_APDS", H5T_STD_U8LE, scalarID, H5P_DEFAULT, H5P_DEFAULT);
-    H5Awrite(attID, H5T_NATIVE_UCHAR, reinterpret_cast<void*>(&LightMap::MAX_APDS));
+    H5Awrite(attID, H5T_NATIVE_UCHAR, reinterpret_cast<const void*>(&LightMap::MAX_APDS));
     H5Aclose(attID);
     H5Sclose(scalarID);
   }
@@ -65,7 +65,7 @@ void WriteLightMap(std::string filename,
     hid_t datasetID = H5Dcreate2(fileID, "posFunc", H5T_IEEE_F64LE, vectorID,
                                  H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     H5Dwrite(datasetID, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT,
-             reinterpret_cast<void*>(&posFunc.GetValAt(0, 0));
+             reinterpret_cast<const void*>(&posFunc.GetValAt(0, 0)));
     HDF5Helper::WriteMapAsAttribute(posFunc.APDIndex(), datasetID, "APDindex");
 
     const LightMap::PositionFunc::PosIndexT& pos_index = posFunc.PosIndex();
@@ -82,31 +82,31 @@ void WriteLightMap(std::string filename,
     hid_t scalarID = H5Screate(H5S_SCALAR);
     hid_t attID;
     attID = H5Acreate2(datasetID, "xmin", H5T_IEEE_F64LE, scalarID, H5P_DEFAULT, H5P_DEFAULT);
-    H5Awrite(firstID, H5T_NATIVE_DOUBLE, reinterpret_cast<void*>(&xmin));
+    H5Awrite(attID, H5T_NATIVE_DOUBLE, reinterpret_cast<void*>(&xmin));
     H5Aclose(attID);
     attID = H5Acreate2(datasetID, "xstep", H5T_IEEE_F64LE, scalarID, H5P_DEFAULT, H5P_DEFAULT);
-    H5Awrite(firstID, H5T_NATIVE_DOUBLE, reinterpret_cast<void*>(&xstep));
+    H5Awrite(attID, H5T_NATIVE_DOUBLE, reinterpret_cast<void*>(&xstep));
     H5Aclose(attID);
     attID = H5Acreate2(datasetID, "xnum", H5T_STD_U32LE, scalarID, H5P_DEFAULT, H5P_DEFAULT);
-    H5Awrite(firstID, H5T_NATIVE_HSIZE, reinterpret_cast<void*>(&xnum));
+    H5Awrite(attID, H5T_NATIVE_HSIZE, reinterpret_cast<void*>(&xnum));
     H5Aclose(attID);
     attID = H5Acreate2(datasetID, "ymin", H5T_IEEE_F64LE, scalarID, H5P_DEFAULT, H5P_DEFAULT);
-    H5Awrite(firstID, H5T_NATIVE_DOUBLE, reinterpret_cast<void*>(&ymin));
+    H5Awrite(attID, H5T_NATIVE_DOUBLE, reinterpret_cast<void*>(&ymin));
     H5Aclose(attID);
     attID = H5Acreate2(datasetID, "ystep", H5T_IEEE_F64LE, scalarID, H5P_DEFAULT, H5P_DEFAULT);
-    H5Awrite(firstID, H5T_NATIVE_DOUBLE, reinterpret_cast<void*>(&ystep));
+    H5Awrite(attID, H5T_NATIVE_DOUBLE, reinterpret_cast<void*>(&ystep));
     H5Aclose(attID);
     attID = H5Acreate2(datasetID, "ynum", H5T_STD_U32LE, scalarID, H5P_DEFAULT, H5P_DEFAULT);
-    H5Awrite(firstID, H5T_NATIVE_HSIZE, reinterpret_cast<void*>(&ynum));
+    H5Awrite(attID, H5T_NATIVE_HSIZE, reinterpret_cast<void*>(&ynum));
     H5Aclose(attID);
     attID = H5Acreate2(datasetID, "zmin", H5T_IEEE_F64LE, scalarID, H5P_DEFAULT, H5P_DEFAULT);
-    H5Awrite(firstID, H5T_NATIVE_DOUBLE, reinterpret_cast<void*>(&xmin));
+    H5Awrite(attID, H5T_NATIVE_DOUBLE, reinterpret_cast<void*>(&xmin));
     H5Aclose(attID);
     attID = H5Acreate2(datasetID, "zstep", H5T_IEEE_F64LE, scalarID, H5P_DEFAULT, H5P_DEFAULT);
-    H5Awrite(firstID, H5T_NATIVE_DOUBLE, reinterpret_cast<void*>(&zstep));
+    H5Awrite(attID, H5T_NATIVE_DOUBLE, reinterpret_cast<void*>(&zstep));
     H5Aclose(attID);
     attID = H5Acreate2(datasetID, "znum", H5T_STD_U32LE, scalarID, H5P_DEFAULT, H5P_DEFAULT);
-    H5Awrite(firstID, H5T_NATIVE_HSIZE, reinterpret_cast<void*>(&znum));
+    H5Awrite(attID, H5T_NATIVE_HSIZE, reinterpret_cast<void*>(&znum));
     H5Aclose(attID);
 
     H5Sclose(scalarID);
@@ -118,7 +118,7 @@ void WriteLightMap(std::string filename,
   {
     hid_t grpID = H5Gcreate2(fileID, "/gainFunc", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     for(size_t i = 0; i < gainFunc.NumSnapshots(); i++) {
-      const GainSnapshot& gain = gainFunc.GainAtIndex(i);
+      const LightMap::GainSnapshot& gain = gainFunc.GainAtIndex(i);
 
       // Produce the appropriate name.
       std::ostringstream namestr;
@@ -128,18 +128,18 @@ void WriteLightMap(std::string filename,
       // Write stuff to file.
       hsize_t SizeOfArray = gain.APDIndex().MaxIndex();
       hid_t vectorID = H5Screate_simple(1, &SizeOfArray, NULL);
-      hid_t datasetID = H5Dcreate2(grpID, name.str(), H5T_IEEE_F64LE, vectorID,
+      hid_t datasetID = H5Dcreate2(grpID, name.c_str(), H5T_IEEE_F64LE, vectorID,
                                    H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
       H5Dwrite(datasetID, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT,
-               reinterpret_cast<void*>(&gain.GetValAt(0));
+               reinterpret_cast<const void*>(&gain.GetValAt(0)));
       HDF5Helper::WriteMapAsAttribute(gain.APDIndex(), datasetID, "APDindex");
-      int firstRun = gain.FirstRun();
-      int lastRun = gain.LastRun();
+      const int firstRun = gain.FirstRun();
+      const int lastRun = gain.LastRun();
       hid_t scalarID = H5Screate(H5S_SCALAR);
       hid_t firstID = H5Acreate2(datasetID, "first_run", H5T_STD_I32LE, scalarID, H5P_DEFAULT, H5P_DEFAULT);
-      H5Awrite(firstID, H5T_NATIVE_INT, reinterpret_cast<void*>(&firstRun));
+      H5Awrite(firstID, H5T_NATIVE_INT, reinterpret_cast<const void*>(&firstRun));
       hid_t lastID = H5Acreate2(datasetID, "last_run", H5T_STD_I32LE, scalarID, H5P_DEFAULT, H5P_DEFAULT);
-      H5Awrite(lastID, H5T_NATIVE_INT, reinterpret_cast<void*>(&lastRun));
+      H5Awrite(lastID, H5T_NATIVE_INT, reinterpret_cast<const void*>(&lastRun));
       H5Aclose(lastID);
       H5Aclose(firstID);
       H5Sclose(scalarID);
@@ -157,7 +157,7 @@ void WriteLightMap(std::string filename,
 Read in the position function from an already-opened hdf5 file.
 Assume global attributes have already been checked.
 */
-void ReadPosFunc(hid_t fileID, LightMap::PosFunc& posFunc) {
+void ReadPosFunc(hid_t fileID, LightMap::PositionFunc& posFunc) {
   hid_t datasetID = H5Dopen2(fileID, "posFunc", H5P_DEFAULT);
 
   // Start by reading attributes.
@@ -251,6 +251,7 @@ choose to use a default gain map, with reservations.
 */
 class GainFuncNotKnown : public std::runtime_error
 {
+ public:
   // Identify errors due to a file not containing an appropriate gain function.
   // We'll generally recover from this circumstance by generating a default
   // gain function, but we'll need to know it happened well upstream of here.
@@ -281,7 +282,7 @@ herr_t TestSnapshotContainsRun(hid_t g_id, const char *name,
   return 0;
 }
 
-GainSnapshot ReadGainSnapshotForRun(int run, hid_t fileID) {
+LightMap::GainSnapshot ReadGainSnapshotForRun(int run, hid_t fileID) {
   hid_t grpID = H5Gopen2(fileID, "/gainFunc", H5P_DEFAULT);
 
   // Iterate through the group, looking for the right gain snapshot.
@@ -304,7 +305,7 @@ The PosFunc will be filled; we also return a gain snapshot.
 If the gain snapshot does not exist in the file, we fill the posFunc and
 throw an exception of type GainFuncNotKnown.
 */
-LightMap::GainSnapshot ReadLightmapAtRun(std::string filename, int run, LightMap::PosFunc& posFunc) {
+LightMap::GainSnapshot ReadLightmapAtRun(std::string filename, int run, LightMap::PositionFunc& posFunc) {
   hid_t fileID = H5Fopen(filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
 
   // Read the position function.
@@ -336,7 +337,7 @@ herr_t AddSnapshotToGainFunc(hid_t g_id, const char *name,
   return 0;
 }
 
-LightMap::GainFunc ReadLightmap(std::string filename, LightMap::PosFunc& posFunc) {
+LightMap::GainFunc ReadLightmap(std::string filename, LightMap::PositionFunc& posFunc) {
   hid_t fileID = H5Fopen(filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
 
   // Read the position function.

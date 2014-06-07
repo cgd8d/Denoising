@@ -50,7 +50,7 @@ int main()
 
   // Retrieve the indices of the x, y, and z coordinates.
   const IntervalIndexHandler& xIndex = posFunc.PosIndex().MajorIndex().MajorIndex();
-  const IntervalIndexHandler& yIndex = posFunc.PosIndex().MajorIndeX().MinorIndex();
+  const IntervalIndexHandler& yIndex = posFunc.PosIndex().MajorIndex().MinorIndex();
   const IntervalIndexHandler& zIndex = posFunc.PosIndex().MinorIndex();
 
   // Initialize the gain function to be identically one.
@@ -234,6 +234,23 @@ int main()
     }
     std::cout << "Done computing the gain function." << std::endl;
   } // End loop over iterations.
+
+  // Clean up sqlite resources.
+  ret = sqlite3_finalize(prep_stmt_pos);
+  if(ret != SQLITE_OK) {
+    std::cerr << "Failed to finalize an sqlite statement." << std::endl;
+    std::cerr << "We'll finish up because we (probably) can, but this should be fixed." << std::endl;
+  }
+  ret = sqlite3_finalize(prep_stmt_run);
+  if(ret != SQLITE_OK) {
+    std::cerr << "Failed to finalize an sqlite statement." << std::endl;
+    std::cerr << "We'll finish up because we (probably) can, but this should be fixed." << std::endl;
+  }
+  ret = sqlite3_close_v2(connection);
+  if(ret != SQLITE_OK) {
+    std::cerr << "Failed to close the sqlite connection." << std::endl;
+    std::cerr << "We'll finish up because we (probably) can, but this should be fixed." << std::endl;
+  }
 
   // We've generated a good (hopefully) lightmap -- now write it to file.
   std::cout << "Finished generating lightmap -- write to Tmp/LightMap.hdf5." << std::endl;

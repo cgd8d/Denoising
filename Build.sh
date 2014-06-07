@@ -13,3 +13,5 @@ echo "-Wl,-Bstatic -l$1 -Wl,-Bdynamic"
 }
 
 g++ -O3 -o ComputeNoiseCorrelations -I. -I$HDF5_INCDIR `exo-config --cflags` -L`exo-config --libdir` -L$HDF5_LIBDIR ComputeNoiseCorrelations.C `static_link hdf5` -lEXOUtilities
+
+g++ -O3 -o BuildLightMap -I. -I$HDF5_INCDIR `exo-config --cflags` -L`exo-config --libdir` -L$HDF5_LIBDIR BuildLightMap.C `static_link hdf5` -lEXOUtilities
