@@ -2,6 +2,10 @@
 Contain information which is common to multiple scripts.
 '''
 
+import ROOT
+ROOT.gROOT.SetBatch()
+ROOT.gSystem.Load("libEXOUtilities")
+
 # List of apd channels to use.
 # Channels 178, 191, and 205 were never good.
 # Some others have been disconnected during running, but all of these apds

@@ -95,7 +95,7 @@ for logfilename in ListOfLogFiles:
     chain.SetBranchAddress("EventBranch", event)
 
     # Extract relevant information from the log file.
-    logfilecontents = open(logfilename).read()
+    logfilecontents = open(os.path.join(LogFileDir, logfilename)).read()
     theta_match = theta_regexp.search(logfilecontents)
     peakpos_match = peakpos_regexp.search(logfilecontents)
     resol_match = resol_regexp.search(logfilecontents)
@@ -136,7 +136,7 @@ for logfilename in ListOfLogFiles:
 
         for iscint in range(event.GetNumScintillationClusters()):
             scint = event.GetScintillationCluster(iscint)
-            NumScintClustersTotal += 1
+            NumScintTotal += 1
 
             # If it's not SS, throw it away.
             if scint.GetNumChargeClusters() != 1:
@@ -210,7 +210,7 @@ for logfilename in ListOfLogFiles:
 
             # Passes diagonal cut.
             diagCut = calibManager.getCalib("diagonal-cut", "2013-0nu-denoised", event.fEventHeader)
-            if not diagCut.SurvivesSingleSiteCut(scint.fEnergy, charge.fPurityCorrectedEnergy): continue
+            if not diagCut.SurvivesSingleSiteCut(scintE, charge.fPurityCorrectedEnergy):
                 NumScintCut_Diag += 1
                 continue
 
@@ -226,7 +226,7 @@ for logfilename in ListOfLogFiles:
             # Prepare an sql row, and insert it.
             # Note that we use the fit magnitude from reconstruction, which is undenoised;
             # denoised individual-APD magnitudes could improve the quality of the lightmap.
-            RowToInsert = [runNo, cluster.fX, cluster.fY, cluster.fZ]
+            RowToInsert = [runNo, charge.fX, charge.fY, charge.fZ]
             scaling_factor = ROOT.APD_ADC_FULL_SCALE_ELECTRONS/(ROOT.ADC_BITS*ROOT.APD_GAIN)
             for apd in Common.APDs:
                 APDsignal = scint.GetAPDSignal(ROOT.EXOAPDSignal.kGangFit, apd)
@@ -260,7 +260,7 @@ print "\t%i cut because the resolution was unreasonable." % NumRunsCut_Res
 print "\t%i cut because the peak position was unreasonable." % NumRunsCut_PeakPos
 print "%i runs were actually used." % NumRunsUsed
 print
-print "These runs contained % events (total)." % NumEntriesTotal
+print "These runs contained %i events (total)." % NumEntriesTotal
 print "\t%i were cut due to being tagged as noise." % NumEntriesCut_Noise
 print "The acceptable events contained %i scint clusters (before additional cuts)." % NumScintTotal
 print "\t%i were cut as multi-site (multiple charge clusters)." % NumScintCut_MS

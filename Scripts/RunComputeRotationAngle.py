@@ -25,13 +25,13 @@ proc = []
 for runInfo in ds:
     runNo = runInfo.GetRunNumber()
     # Try to clear out processes; simultaneously limit the number of running processes.
-    while len(proc) > 50:
+    while len(proc) > 30:
         map(lambda x: x[0].poll(), proc)
         finishedProcs = filter(lambda x: x[0].returncode != None, proc)
         for p in finishedProcs:
             proc.remove(p)
             if p[0].returncode != 0: print "Run %08i failed." % p[1]
-        if len(proc) > 50: time.sleep(10) # Just to avoid burning cycles for no reason.
+        if len(proc) > 30: time.sleep(10) # Just to avoid burning cycles for no reason.
 
     if runNo == 4435:
         # This is a Cs run misidentified as Th.  (Need to get Tony to patch this.)
@@ -40,7 +40,7 @@ for runInfo in ds:
     proc.append((subprocess.Popen(['bsub', '-q', 'xlong', '-R', 'rhel60', '-K',
                                    '-o', os.path.join(OutDir, 'RotationAngle_%08i.log' % runNo),
                                    'python',
-                                   'Scripts/ComputeRotationAngle.py', str(runNo)],
+                                   'Scripts/ComputeRotationAngle.py', str(runNo)]),
                  runNo))
 
 # Wait for all of the processes to be done; none should fail.

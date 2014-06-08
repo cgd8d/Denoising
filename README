@@ -28,10 +28,19 @@ TO GENERATE A LIGHTMAP
 
 On SLAC, from the base directory of this repository, run:
 
-1) bsub -q xlong -R rhel60 -o RunComputeRotationAngle.log python Scripts/RunComputeRotationAngle.py
+1) bsub -q xxl -R rhel60 -o RunComputeRotationAngle.log python Scripts/RunComputeRotationAngle.py
 
 The purpose of this script (which calls ComputeRotationAngle.py) is to locate the thorium peak position and optimal angle.  We already run ComputeRotationAngle.py -- a different version -- on the pipeline, but that version only takes events with nsc = 1 so it is not correct for strong source runs.  Someone should fix this, and then we wouldn't have to rerun it over all data ourselves.  If you do fix it, be careful -- currently we trust the ComputeRotationAngle script to reject non-Th runs, but if someone else's version works on non-Th runs then we'll need to do the check elsewhere.
 
 This script does not expect every run to succeed; some fail for good reasons.  However, any run which fails will not be included in the lightmap, so it would be good to make it as robust as possible.
 
-...STILL WRITING THIS PART OF THE DOCUMENTATION...
+With good queue availability, this takes around one hour.
+
+2) bsub -q xxl -R rhel60 -o BuildThEventDatabase.log python -u Scripts/BuildThEventDatabase.py
+
+Now that we've identified the thorium peak on a run-by-run basis, along with the optimal rotation angle and the resolution, build a database of full-energy single-site thorium events.  At the end, statistics are printed to indicate why runs and events were cut.
+
+3) bsub -q xlong -R rhel60 -o BuildLightMap.log ./BuildLightMap
+
+Use the database of full-energy single-site thorium events to build a lightmap.  It will be saved in Tmp/LightMap.hdf5.  (If a file already exists there, it will fail.)
+
