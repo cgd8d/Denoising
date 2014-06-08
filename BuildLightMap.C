@@ -252,6 +252,104 @@ int main()
     std::cerr << "We'll finish up because we (probably) can, but this should be fixed." << std::endl;
   }
 
+  // We know relative R(x) and S(t) -- fix them using [hard-coded] laser data.
+  // The laser data used is from laser run 4540.
+  // NOTE: by the time of run 4540, channel 163 was already disconnected, so the number here is made up.
+  // NOTE: it would be great in the future to do a better correspondence between
+  // absolute gain measurements from laser runs and relative gain measurements from thorium.
+  for(size_t i = 0; i < APDIndex.MaxIndex(); i++) {
+    double laser_gain;
+    switch(APDIndex.KeyForIndex(i)) {
+      case 152: laser_gain = 201.230438146; break;
+      case 153: laser_gain = 178.750438779; break;
+      case 154: laser_gain = 194.228589338; break;
+      case 155: laser_gain = 183.33801615; break;
+      case 156: laser_gain = 218.485999976; break;
+      case 157: laser_gain = 222.139259152; break;
+      case 158: laser_gain = 169.982559736; break;
+      case 159: laser_gain = 140.385120552; break;
+      case 160: laser_gain = 137.602725389; break;
+      case 161: laser_gain = 197.78183714; break;
+      case 162: laser_gain = 155.478773762; break;
+      case 163: laser_gain = 200; break; // FICTITIOUS, but this channel was disconnected Feb 2012.  Better guess?
+      case 164: laser_gain = 175.875067527; break;
+      case 165: laser_gain = 160.014408865; break;
+      case 166: laser_gain = 183.408055613; break;
+      case 167: laser_gain = 189.600819126; break;
+      case 168: laser_gain = 160.339214431; break;
+      case 169: laser_gain = 168.547991045; break;
+      case 170: laser_gain = 182.670039836; break;
+      case 171: laser_gain = 205.567802982; break;
+      case 172: laser_gain = 195.87450621; break;
+      case 173: laser_gain = 224.956647122; break;
+      case 174: laser_gain = 232.062359991; break;
+      case 175: laser_gain = 241.822881767; break;
+      case 176: laser_gain = 194.740435753; break;
+      case 177: laser_gain = 189.867775084; break;
+      // case 178: laser_gain = 0; // Bad channel, omitted.
+      case 179: laser_gain = 206.755206938; break;
+      case 180: laser_gain = 207.822617603; break;
+      case 181: laser_gain = 207.501985741; break;
+      case 182: laser_gain = 218.213137769; break;
+      case 183: laser_gain = 234.369354843; break;
+      case 184: laser_gain = 99.908111992; break;
+      case 185: laser_gain = 238.381809313; break;
+      case 186: laser_gain = 225.118270743; break;
+      case 187: laser_gain = 199.078450518; break;
+      case 188: laser_gain = 221.863823239; break;
+      case 189: laser_gain = 177.032783679; break;
+      case 190: laser_gain = 196.787332164; break;
+      // case 191: laser_gain = 0; // Bad channel, omitted.
+      case 192: laser_gain = 194.923448865; break;
+      case 193: laser_gain = 197.027984846; break;
+      case 194: laser_gain = 202.757086104; break;
+      case 195: laser_gain = 194.432937658; break;
+      case 196: laser_gain = 208.992809367; break;
+      case 197: laser_gain = 224.762562055; break;
+      case 198: laser_gain = 217.696006443; break;
+      case 199: laser_gain = 222.380158829; break;
+      case 200: laser_gain = 218.358804472; break;
+      case 201: laser_gain = 209.573057132; break;
+      case 202: laser_gain = 194.684536629; break;
+      case 203: laser_gain = 182.543842783; break;
+      case 204: laser_gain = 193.469930111; break;
+      // case 205: laser_gain = 0; // Bad channel, omitted.
+      case 206: laser_gain = 193.627191472; break;
+      case 207: laser_gain = 196.073150574; break;
+      case 208: laser_gain = 189.597962521; break;
+      case 209: laser_gain = 198.824317108; break;
+      case 210: laser_gain = 222.747770671; break;
+      case 211: laser_gain = 216.928470825; break;
+      case 212: laser_gain = 223.437239807; break;
+      case 213: laser_gain = 224.316404923; break;
+      case 214: laser_gain = 216.26783603; break;
+      case 215: laser_gain = 209.612423384; break;
+      case 216: laser_gain = 223.041660884; break;
+      case 217: laser_gain = 202.642254512; break;
+      case 218: laser_gain = 213.904993632; break;
+      case 219: laser_gain = 221.988942321; break;
+      case 220: laser_gain = 201.427174798; break;
+      case 221: laser_gain = 196.689200146; break;
+      case 222: laser_gain = 191.457656123; break;
+      case 223: laser_gain = 186.183873541; break;
+      case 224: laser_gain = 217.033080346; break;
+      case 225: laser_gain = 205.858374653; break;
+      default: laser_gain = 0; // Bad or non-existent channel.
+    }
+
+    double thorium_gain = gainFunc.GainForRun(4540).GetValAt(i);
+
+    if(laser_gain == 0 or thorium_gain == 0) continue;
+
+    double ratio_gains = laser_gain/thorium_gain;
+    for(size_t j = 0; j < gainFunc.NumSnapshots(); j++) {
+      gainFunc.GainAtIndex(j).GetValAt(i) *= ratio_gains;
+    }
+    for(size_t j = 0; j < posFunc.PosIndex().MaxIndex(); j++) {
+      posFunc.GetValAt(j, i) /= ratio_gains; // To keep the product of R and S the same.
+    }
+  }
+
   // We've generated a good (hopefully) lightmap -- now write it to file.
   std::cout << "Finished generating lightmap -- write to Tmp/LightMap.hdf5." << std::endl;
   LightMapIO::WriteLightMap("Tmp/LightMap.hdf5", posFunc, gainFunc);
