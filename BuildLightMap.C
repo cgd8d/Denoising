@@ -2,6 +2,10 @@
 Build the lightmap.  We take as input a pre-built sqlite database generated
 by the BuildThEventDatabase.py script.
 
+Note that we use laser data (in a very rudimentary way) to ensure gainFunc (S(t) in my thesis) is
+the APD gain; the rest of the lightmap is absorbed into posFunc (R(x) in my thesis).
+This allows us to not worry about laser data within denoising itself.
+
 Note: if the sqlite queries are slow, we would probably benefit from compiling sqlite3 with the
 SQLITE_ENABLE_STAT4 macro enabled before running ANALYZE.  However, we do the analysis from python's
 sqlite3 module right now, so we don't have access to compilation options -- but there
@@ -73,9 +77,9 @@ int main()
 
   // Build a comma-separated list of APD columns to retrieve in each case.
   std::ostringstream QueryColumns;
-  QueryColumns << "apd_" << APDIndex.KeyForIndex(0) << "_magnitude";
+  QueryColumns << "apd_" << int(APDIndex.KeyForIndex(0)) << "_magnitude";
   for(size_t i = 1; i < APDIndex.MaxIndex(); i++) {
-    QueryColumns << ", apd_" << APDIndex.KeyForIndex(i) << "_magnitude";
+    QueryColumns << ", apd_" << int(APDIndex.KeyForIndex(i)) << "_magnitude";
   }
   QueryColumns << " FROM events WHERE ";
 

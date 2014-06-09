@@ -192,7 +192,7 @@ void WriteNoiseCorrelations(std::string filename, const NoiseCorrelations& noise
     H5Sclose(vectorID);
   }
 
-  assert(H5Fget_obj_count(fileID, H5F_OBJ_ALL) == 0); // Make sure we didn't leak any objects.
+  assert(H5Fget_obj_count(fileID, H5F_OBJ_ALL) == 1); // The file should be the only object left.
   H5Fclose(fileID);
 }
 
@@ -265,7 +265,7 @@ void ReadNoiseCorrelations(std::string filename, NoiseCorrelations& noise)
     H5Dclose(datasetID);
   }
 
-  assert(H5Fget_obj_count(fileID, H5F_OBJ_ALL) == 0); // Make sure we didn't leak any objects.
+  assert(H5Fget_obj_count(fileID, H5F_OBJ_ALL) == 1); // The file should be the only object left.
   H5Fclose(fileID);
 }
 

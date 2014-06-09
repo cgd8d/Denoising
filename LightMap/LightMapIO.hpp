@@ -149,7 +149,7 @@ void WriteLightMap(std::string filename,
     H5Gclose(grpID);
   }
 
-  assert(H5Fget_obj_count(fileID, H5F_OBJ_ALL) == 0); // Make sure we didn't leak any objects.
+  assert(H5Fget_obj_count(fileID, H5F_OBJ_ALL) == 1); // The file should be the only object left.
   H5Fclose(fileID);
 }
 
@@ -314,10 +314,12 @@ LightMap::GainSnapshot ReadLightmapAtRun(std::string filename, int run, LightMap
   // Read the gain snapshot.
   try {
     LightMap::GainSnapshot gain = ReadGainSnapshotForRun(run, fileID);
+    assert(H5Fget_obj_count(fileID, H5F_OBJ_ALL) == 1); // The file should be the only object left.
     H5Fclose(fileID);
     return gain;
   }
   catch (GainFuncNotKnown& exc) {
+    assert(H5Fget_obj_count(fileID, H5F_OBJ_ALL) == 1); // The file should be the only object left.
     H5Fclose(fileID);
     throw; // Re-throw the exception -- just needed to clean up the file.
   }
@@ -351,6 +353,7 @@ LightMap::GainFunc ReadLightmap(std::string filename, LightMap::PositionFunc& po
 
   // Clean up and return.
   H5Gclose(grpID);
+  assert(H5Fget_obj_count(fileID, H5F_OBJ_ALL) == 1); // The file should be the only object left.
   H5Fclose(fileID);
   return gainFunc;
 }
