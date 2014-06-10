@@ -1,0 +1,8 @@
+#!/bin/bash
+#PBS -q regular
+#PBS -l mppwidth=24
+#PBS -l walltime=00:30:00
+#PBS -N RunDenoising
+#PBS -j oe
+
+aprun -n 1 -cc none RunDenoising Recon.exo ...

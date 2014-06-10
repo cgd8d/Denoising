@@ -48,3 +48,4 @@ Use the database of full-energy single-site thorium events to build a lightmap. 
 
 The laser run data is also incorporated here to ensure that S(t) is genuinely the APD gain, and not some scaled version; the rest is absorbed into R(x).  Note that electronics gains are not included in S(t) currently.
 
+This takes about 7 hours to run, and produces an 18MB lightmap file.
