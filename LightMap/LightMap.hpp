@@ -135,6 +135,8 @@ class GainSnapshot
 {
  public:
 
+  GainSnapshot() {}
+
   GainSnapshot(APDIndexT index, int first_run, int last_run)
   : fAPDIndex(index),
     fFirstRun(first_run),

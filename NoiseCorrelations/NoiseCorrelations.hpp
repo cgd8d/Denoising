@@ -74,13 +74,15 @@ class NoiseCorrelations
   typedef ProductIndexHandler<RangeIndexHandler<unsigned char>,
                               MapIndexHandler<unsigned char> > NoiseBlockIndexT;
 
-  // To construct an empty noise correlation object, we need to know what channels are desired.
-  // Everything else we can set up for you.
+  // We do not allocate any noise matrix entries yet; be sure to call SetChannelIndex.
+  NoiseCorrelations()
+    : fFreqIndex(double(1.)/(2048*CLHEP::microsecond), double(1.)/(2048*CLHEP::microsecond), 1024)
+  { }
+
+  // Set channel index and allocate space for noise correlations.
   // All correlations are initialized to zero automatically by the resize.
-  NoiseCorrelations(const MapIndexHandler<unsigned char>& channelIndex)
-    : fFreqIndex(double(1.)/(2048*CLHEP::microsecond), double(1.)/(2048*CLHEP::microsecond), 1024),
-      fBlockIndex(RangeIndexHandler<unsigned char>(0, 2), channelIndex)
-  {
+  void SetChannelIndex(const MapIndexHandler<unsigned char>& channelIndex) {
+    fBlockIndex = std::make_pair(RangeIndexHandler<unsigned char>(0, 2), channelIndex);
     fMatrices.resize(fFreqIndex.MaxIndex(), NoiseMatrix(fBlockIndex));
   }
 

@@ -8,15 +8,18 @@ should be used, but the output filename should not be specified.
 
 Invoke with:
 
-RunDenoising <exo_filename> <temp_output_filename> <final_output_filename>
+RunDenoising <exo_filename> <temp_output_filename> <final_output_filename> <lightmap_filename> <noise_filename>
 
 The exo file should include use of the toutput module, but should *not* specify
 the filename of the temporary output file; we take care of that.
 It also should not invoke begin or exit.
 
+We assume that the channel map does not change throughout denoising; effectively, that means
+that we can only process over one run.
 */
 
 #include "Denoising/EXOSetDenoisedScintModule.hpp"
+#include "Denoising/WaveformCache.hpp"
 
 #include "EXOAnalysisManager/EXOAnalysisModule.hh"
 #include "EXOAnalysisManager/EXOAnalysisManager.hh"
@@ -29,10 +32,13 @@ It also should not invoke begin or exit.
 
 int main(int argc, char** argv)
 {
-  assert(argc == 3);
+  assert(argc == 6);
 
   // Create the object which will retain, and later set, denoised results.
   EXOSetDenoisedScintModule SetDenoisedScintMod;
+
+  // Create a waveform cache.
+  WaveformCache wfCache;
 
   {
     // Start up an EXOAnalysis session.  Initialize it with the settings from the exo.
@@ -48,12 +54,21 @@ int main(int argc, char** argv)
     // Initialize analysis.
     analysisManager.InitAnalysis();
 
+    // And create a denoiser object.
+    Denoiser denoiser;
+    // denoiser.fDenoiseUWires = true; // Set if you want to denoise u-wires simultaneously with apds.
+    denoiser.fLightmapFilename = argv[4];
+    denoiser.fNoiseCorrFilename = argv[5];
+
     // Run processing loop.
     EXOEventData* event = analysisManager.StepAnalysis();
-    //if(event) InitDenoiser(event); // Get appropriate lightmap, etc.
+    if(event) { // initialize things based on the first event.
+      const MapIndexHandler<unsigned char> chanIndex = InitDenoiser(event);
+      wfCache.SetChannelIndex(chanIndex);
+    }
     while(event) {
-      //bool EventIsDenoisable = StepDenoiser(event);
-      //if(EventIsDenoisable) CacheWaveforms(event);
+      bool EventIsDenoisable = false;// = StepDenoiser(event);
+      if(EventIsDenoisable) wfCache(event);
       event = analysisManager.StepAnalysis();
     }
 

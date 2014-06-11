@@ -198,7 +198,8 @@ void WriteNoiseCorrelations(std::string filename, const NoiseCorrelations& noise
 
 /*
 Read noise correlations from a file into a noise object.
-Only read noise related to channels which are in the noise object's map.
+Only read noise related to channels which are in the noise object's map,
+so be sure to call SetChannelIndex before reading correlations into it.
 */
 void ReadNoiseCorrelations(std::string filename, NoiseCorrelations& noise)
 {

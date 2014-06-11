@@ -186,7 +186,8 @@ int main(int argc, char** argv)
   MapIndexHandler<unsigned char> ChannelIndex;
   for(unsigned char i = 0; i < (unsigned char)NUMBER_READOUT_CHANNELS; i++) ChannelIndex.InsertKey(i);
   assert(ChannelIndex.MaxIndex() == NUMBER_READOUT_CHANNELS);
-  NoiseCorrelations NoiseCorr(ChannelIndex);
+  NoiseCorrelations NoiseCorr;
+  NoiseCorr.SetChannelIndex(ChannelIndex);
   assert(NoiseCorr.GetFrequencyIndex().MaxIndex() == 1024);
 
   for(size_t i = 0; i < NUMBER_READOUT_CHANNELS; i++) {
