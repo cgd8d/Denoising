@@ -23,6 +23,7 @@ class Denoiser
   Denoiser()
   : fDenoiseAPDs(true),
     fDenoiseUWires(false),
+    fNumMulsAccumulate(500),
   { }
 
   // Parameters to set *before* calling InitDenoiser.
@@ -30,6 +31,7 @@ class Denoiser
   bool fDenoiseUWires;
   std::string fLightmapFilename;
   std::string fNoiseCorrFilename;
+  size_t fNumMulsAccumulate;
 
   // Initialize the denoiser with the first event.
   // Return the channel map which we should use.
@@ -43,7 +45,7 @@ class Denoiser
     // Don't use bad channels; we assume this list does not change event-by-event.
     // Also, here we decide whether to denoise u-wires.
     assert(fDenoiseAPDs or fDenoiseUWires);
-    MapIndexHandler<unsigned char> channelMap;
+    assert(fChannelMap.MaxIndex() == 0);
     for(size_t chan = 0; chan < NUMBER_READOUT_CHANNELS; chan++) {
       if(ChannelMap.channel_suppressed_by_daq(i) or not ChannelMap.good_channel(i)) continue;
 
@@ -51,7 +53,7 @@ class Denoiser
       if(not(fDenoiseAPDs and channelType == EXOMiscUtil::kAPDGang or
              fDenoiseUWires and channelType == EXOMiscUtil::kUWire)) continue;
 
-      channelMap.InsertKey(chan);
+      fChannelMap.InsertKey(chan);
     }
 
     // If we're denoising APDs (as we generally are), read in the lightmap.
@@ -62,10 +64,10 @@ class Denoiser
     }
 
     // Read in the noise correlations.
-    fNoiseCorr.SetChannelIndex(channelMap);
+    fNoiseCorr.SetChannelIndex(fChannelMap);
     NoiseCorrelationsIO::ReadNoiseCorrelations(fNoiseCorrFilename, fNoiseCorr);
 
-    return channelMap;
+    return fChannelMap;
   }
 
 
@@ -74,5 +76,6 @@ class Denoiser
   LightMap::PositionFunc fAPDPosFunc;
   LightMap::GainSnapshot fAPDGainSnapshot;  
   NoiseCorrelations fNoiseCorr;
+  MapIndexHandler<unsigned char> fChannelMap; // Channels which we are denoising.
 };
 #endif

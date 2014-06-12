@@ -190,11 +190,29 @@ class ProductIndexHandler
   typedef std::pair<typename MajorIndexT::key_type,
                     typename MinorIndexT::key_type> key_type;
 
+  ProductIndexHandler() : fMaxIndex(0) {}
+
   ProductIndexHandler(const MajorIndexT& index1, const MinorIndexT& index2) :
     fMaxIndex(index1.MaxIndex()*index2.MaxIndex()),
     fMajorIndex(index1),
     fMinorIndex(index2)
   { }
+
+  ProductIndexHandler<MajorIndexT, MinorIndexT>&
+    operator=(const ProductIndexHandler<MajorIndexT, MinorIndexT>& other) {
+      fMaxIndex = other.fMaxIndex;
+      fMajorIndex = other.fMajorIndex;
+      fMinorIndex = other.fMinorIndex;
+      return *this;
+    }
+
+  ProductIndexHandler<MajorIndexT, MinorIndexT>&
+    operator=(const std::pair<MajorIndexT, MinorIndexT>& other) {
+      fMaxIndex = other.first.MaxIndex()*other.second.MaxIndex();
+      fMajorIndex = other.first;
+      fMinorIndex = other.second;
+      return *this;
+    }
 
   size_t MaxIndex() const {return fMaxIndex;}
 

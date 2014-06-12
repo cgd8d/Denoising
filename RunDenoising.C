@@ -59,6 +59,7 @@ int main(int argc, char** argv)
     // denoiser.fDenoiseUWires = true; // Set if you want to denoise u-wires simultaneously with apds.
     denoiser.fLightmapFilename = argv[4];
     denoiser.fNoiseCorrFilename = argv[5];
+    // denoiser.fNumMulsAccumulate = 500; // Set to change how much bulk processing we require.
 
     // Run processing loop.
     EXOEventData* event = analysisManager.StepAnalysis();
