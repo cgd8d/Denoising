@@ -41,7 +41,6 @@ accessed (and modified) using GetOldInput(size_t handle).
 
 #include "NoiseCorrelations/NoiseCorrelations.hpp"
 #include "NoiseCorrelations/NoiseCorrelationsIO.hpp"
-
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/shared_mutex.hpp>
 #include <boost/thread/locks.hpp>
@@ -199,18 +198,15 @@ class NoiseMultiplier
     boost::asio::io_service ioService;
     boost::thread_group thread_group;
     boost::asio::io_service::work* work = new boost::asio::io_service::work(ioService);
-    for(size_t i = 0; i < 24; i++) {
+    for(size_t i = 0; i < 23; i++) {
       thread_group.create_thread(boost::bind(&boost::asio::io_service::run, &ioService));
     }
     for(size_t f = 0; f < fNoiseCorr_Precon.GetFrequencyIndex().MaxIndex(); f++) {
       ioService.post(boost::bind(&NoiseMultiplier::DoMultiplication_OneFrequency, this, f));
     }
     delete work; // Let ioService know that no more work is coming.
-    // FixME: better is to only start 23 threads, since we're the 24th;
-    // Then we should (probably) call run from this thread as well.
-    // We return when there is no more work for this thread, then join the other threads to verify all are done.
-    // It's not a big deal if the join function is not a busy join, but I don't know whether that's the case.
-    thread_group.join_all();
+    ioService.run(); // We are the 24th thread -- jump in and help, return when there's nothing left to do.
+    thread_group.join_all(); // Make sure that all threads are done, not just us.
 
     // Prepare to accept more input.
     std::swap(fVectorsToMultiply, fLastInputVectors);

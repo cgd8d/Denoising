@@ -145,6 +145,8 @@ class RangeIndexHandler
  public:
   typedef KeyT key_type;
 
+  RangeIndexHandler() : fMaxIndex(0) {}
+
   RangeIndexHandler(KeyT start, size_t NumKeys)
     : fMaxIndex(NumKeys),
       fStart(start)

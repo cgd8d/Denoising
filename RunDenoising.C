@@ -19,7 +19,6 @@ that we can only process over one run.
 */
 
 #include "Denoising/EXOSetDenoisedScintModule.hpp"
-#include "Denoising/WaveformCache.hpp"
 
 #include "EXOAnalysisManager/EXOAnalysisModule.hh"
 #include "EXOAnalysisManager/EXOAnalysisManager.hh"
@@ -37,9 +36,6 @@ int main(int argc, char** argv)
   // Create the object which will retain, and later set, denoised results.
   EXOSetDenoisedScintModule SetDenoisedScintMod;
 
-  // Create a waveform cache.
-  WaveformCache wfCache;
-
   {
     // Start up an EXOAnalysis session.  Initialize it with the settings from the exo.
     EXOTalkToManager talktoManager;
@@ -55,7 +51,7 @@ int main(int argc, char** argv)
     analysisManager.InitAnalysis();
 
     // And create a denoiser object.
-    Denoiser denoiser;
+    Denoiser denoiser(SetDenoisedScintMod);
     // denoiser.fDenoiseUWires = true; // Set if you want to denoise u-wires simultaneously with apds.
     denoiser.fLightmapFilename = argv[4];
     denoiser.fNoiseCorrFilename = argv[5];
@@ -63,13 +59,9 @@ int main(int argc, char** argv)
 
     // Run processing loop.
     EXOEventData* event = analysisManager.StepAnalysis();
-    if(event) { // initialize things based on the first event.
-      const MapIndexHandler<unsigned char> chanIndex = InitDenoiser(event);
-      wfCache.SetChannelIndex(chanIndex);
-    }
+    if(event) denoiser.InitDenoiser(event);
     while(event) {
-      bool EventIsDenoisable = false;// = StepDenoiser(event);
-      if(EventIsDenoisable) wfCache(event);
+      // denoiser.StepDenoiser(event);
       event = analysisManager.StepAnalysis();
     }
 
@@ -79,6 +71,9 @@ int main(int argc, char** argv)
       throw EXOAnalysisManager::FailedProcess("Failed finishing up processing");
     }
     analysisManager.ShutDown();
+
+    // Flush out the denoiser.
+    // denoiser.Flush();
 
     // Print running statistics
     std::cout << "EXOAnalysis module statistics (excluding denoising):" << std::endl;

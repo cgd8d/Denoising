@@ -15,12 +15,15 @@ class EXOSetDenoisedScintModule : public EXOAnalysisModule
 {
  public:
 
-  // Result for an event (with possibly many or no scintillation clusters).
-  struct DenoisingResultSet {
-    int fResultSetCode;
-    std::vector<double> fResults;
-  };
+  // Tell the module about a result.
+  void InsertResult(int runNo, int eventNo, const EventSummary& result) {
+    std::pair<int, int> key(runNo, eventNo);
+    assert(fDenoisingResults.find(key) == fDenoisingResults.end());
+    fDenoisingResults[key] = result;
+  }
 
+
+  // Bogus function -- need to recode to use EventSummary.
   EventStatus ProcessEvent(EXOEventData *ED) {
     assert(ED);
     if(ED->GetNumScintillationClusters() == 0) {
@@ -60,8 +63,7 @@ class EXOSetDenoisedScintModule : public EXOAnalysisModule
 
  private:
 
-  typedef std::map<std::pair<int, int>,
-          DenoisingResultSet> DenoisingResultsT;
+  typedef std::map<std::pair<int, int>, EventSummary> DenoisingResultsT;
 
   // Map from run/event number to a list of scintillation energies.
   // At the end of denoising, absence from this list means that there was nothing to denoise.
@@ -72,8 +74,4 @@ class EXOSetDenoisedScintModule : public EXOAnalysisModule
 };
 
 // No need for IMPLEMENT_EXO_ANALYSIS_MODULE, since we won't build this through the factory.
-
-
-
-
 #endif
